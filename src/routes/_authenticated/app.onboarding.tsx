@@ -97,7 +97,7 @@ function Onboarding() {
               duration_min: 60,
               price_cents: 0,
               color: "#CDB4DB",
-              description: `Sesiones: ${Number(s.sessions) || 1}`,
+              description: null,
               active: true,
             },
           });
@@ -199,14 +199,9 @@ function Onboarding() {
             <>
               <p className="text-sm text-muted-foreground">Añade tus servicios principales. Podrás crear más después.</p>
               {services.map((s, i) => (
-                <div key={i} className="grid grid-cols-[1fr_140px] gap-2 items-end">
-                  <Field label="Servicio">
-                    <input className={inputClass} value={s.name} onChange={(e) => setServices((p) => p.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))} placeholder="Limpieza facial" />
-                  </Field>
-                  <Field label="Cantidad de sesiones">
-                    <input type="number" min={1} className={inputClass} value={s.sessions} onChange={(e) => setServices((p) => p.map((x, j) => (j === i ? { ...x, sessions: Number(e.target.value) } : x)))} />
-                  </Field>
-                </div>
+                <Field key={i} label="Servicio">
+                  <input className={inputClass} value={s.name} onChange={(e) => setServices((p) => p.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))} placeholder="Limpieza facial" />
+                </Field>
               ))}
               <button type="button" className={btnGhost} onClick={() => setServices((p) => [...p, { name: "", sessions: 1 }])}>
                 Añadir otro servicio
