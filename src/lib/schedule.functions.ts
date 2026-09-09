@@ -80,7 +80,13 @@ export const openSlot = createServerFn({ method: "POST" })
       .lt("starts_at", data.ends_at)
       .gt("ends_at", data.starts_at);
     if (readErr) throw new Error(readErr.message);
-    const inserts: Array<Record<string, unknown>> = [];
+    const inserts: Array<{
+      business_id: string;
+      starts_at: string;
+      ends_at: string;
+      kind: string;
+      reason: string | null;
+    }> = [];
     for (const b of overlapping ?? []) {
       if (b.starts_at < data.starts_at)
         inserts.push({ business_id: businessId, starts_at: b.starts_at, ends_at: data.starts_at, kind: b.kind, reason: b.reason });
