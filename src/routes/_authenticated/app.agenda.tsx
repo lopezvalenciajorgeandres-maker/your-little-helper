@@ -537,6 +537,33 @@ function Agenda() {
     blockMut.mutate({ starts_at: s.toISOString(), ends_at: e.toISOString(), kind: "dia", reason: "Día no disponible" });
   }
 
+  // Bloqueo horizontal: misma franja horaria en todos los días de la semana visible
+  function isRowBlocked(minutes: number) {
+    return days.every((d) => isSlotBlocked(d, minutes));
+  }
+
+  function toggleRowBlock(minutes: number) {
+    const existing = days.flatMap((d) => {
+      const { s, e } = slotRange(d, minutes);
+      return blocksOverlapping(s, e);
+    });
+    if (existing.length > 0) {
+      unblockMut.mutate(Array.from(new Set(existing.map((b) => b.id))));
+      return;
+    }
+    blockManyMut.mutate(
+      days.map((d) => {
+        const { s, e } = slotRange(d, minutes);
+        return {
+          starts_at: s.toISOString(),
+          ends_at: e.toISOString(),
+          kind: "franja",
+          reason: "Horario no disponible",
+        };
+      }),
+    );
+  }
+
   const bookingSlug = tenant.business?.slug ?? null;
   const bookingUrl =
     typeof window !== "undefined" && bookingSlug ? `${window.location.origin}/booking/${bookingSlug}` : "";
