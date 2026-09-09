@@ -117,6 +117,7 @@ function Agenda() {
   const closeTreat = useServerFn(closeTreatment);
   const completeAppt = useServerFn(completeAppointmentSession);
   const getTreatments = useServerFn(listTreatments);
+  const getReceivables = useServerFn(listReceivables);
   const tenant = useTenant();
 
   const from = new Date(weekStart);
