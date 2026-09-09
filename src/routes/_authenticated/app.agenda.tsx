@@ -1036,18 +1036,18 @@ function Agenda() {
                   const treatmentPaidAndClosed = !!tr && tr.status === "closed" && tr.balance_cents <= 0;
                   const treatmentPaidWithPendingSessions =
                     !!tr &&
-                    tr.status === "open" &&
                     tr.balance_cents <= 0 &&
+                    tr.total_cents > 0 &&
                     trPendingSessions > 0 &&
                     a.status !== "completed" &&
                     a.status !== "cancelled";
                   const payRatio = tr && tr.total_cents > 0 ? Math.min(1, tr.paid_cents / tr.total_cents) : 0;
                   const apptPaid = paidByAppt.get(a.id) ?? 0;
                   const trFullyPaid = !!tr && tr.total_cents > 0 && tr.paid_cents >= tr.total_cents;
-                  const cardColor = treatmentPaidAndClosed
-                    ? "#D1FAE5"
-                    : treatmentPaidWithPendingSessions
-                      ? "#BAE6FD"
+                  const cardColor = treatmentPaidWithPendingSessions
+                    ? "#BAE6FD"
+                    : treatmentPaidAndClosed
+                      ? "#D1FAE5"
                       : sessionsDone
                         ? payProgressColor(payRatio, apptPaid > 0, trFullyPaid)
                         : color;
