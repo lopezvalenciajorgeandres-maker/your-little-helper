@@ -541,12 +541,20 @@ function Agenda() {
     if (existing.length > 0) {
       unblockMut.mutate(existing.map((b) => b.id));
     }
+    // Si el día está marcado como cerrado en el horario del negocio, se abre.
+    const weekday = confirmUnlockDay.getDay();
+    if (weekHours[weekday]?.closed) {
+      hoursMut.mutate(
+        weekHours.map((h) => (h.weekday === weekday ? { ...h, closed: false } : h)),
+      );
+    }
     setConfirmUnlockDay(null);
   }
 
+
   function toggleDayBlock(d: Date) {
     const existing = dayBlocks(d);
-    if (existing.length > 0) {
+    if (existing.length > 0 || weekHours[d.getDay()]?.closed) {
       setConfirmUnlockDay(d);
       return;
     }
@@ -733,11 +741,12 @@ function Agenda() {
           <div className="border-b border-r border-white/5" />
           {days.map((d, i) => {
             const active = isSameDay(d, today);
-            const dayBlocked = isDayFullyBlocked(d);
+            const dayClosed = !!hoursForWeekday(d.getDay())?.closed;
+            const dayBlocked = isDayFullyBlocked(d) || dayClosed;
             return (
               <div key={i} className="border-b border-white/5 py-3 text-center">
                 <div className="text-[11px] uppercase tracking-wider text-neutral-400">{DAY_NAMES[i]}</div>
-                <div className={`mt-1 mx-auto w-9 h-9 flex items-center justify-center rounded-full text-lg font-medium ${active ? "bg-primary text-primary-foreground" : "text-neutral-100"}`}>
+                <div className={`mt-1 mx-auto w-9 h-9 flex items-center justify-center rounded-full text-lg font-medium ${active ? "bg-primary text-primary-foreground" : dayBlocked ? "text-neutral-500" : "text-neutral-100"}`}>
                   {d.getDate()}
                 </div>
                 <button
@@ -748,10 +757,16 @@ function Agenda() {
                       ? "bg-rose-500 text-white hover:bg-rose-600"
                       : "border border-white/15 text-neutral-300 hover:bg-white/10"
                   }`}
-                  title={dayBlocked ? "Día bloqueado — toca para confirmar apertura" : "Bloquear día completo"}
+                  title={
+                    dayClosed
+                      ? "Cerrado según el horario del negocio — toca para abrirlo"
+                      : dayBlocked
+                        ? "Día bloqueado — toca para confirmar apertura"
+                        : "Bloquear día completo"
+                  }
                 >
                   {dayBlocked ? <LockOpen className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
-                  {dayBlocked ? "Liberar día" : "Bloquear día"}
+                  {dayClosed ? "Cerrado" : dayBlocked ? "Liberar día" : "Bloquear día"}
                 </button>
               </div>
             );
@@ -816,15 +831,34 @@ function Agenda() {
                     const em = e.getHours() * 60 + e.getMinutes();
                     return m < em && m + SLOT_MIN > sm;
                   });
+                  const dayClosed = !!dh.closed;
                   return (
                     <div key={m} style={{ height: SLOT_PX }} className="relative group/slot">
                       <button
-                        onClick={() => (blocked ? toggleSlotBlock(d, m) : openNewAt(d, m))}
+                        onClick={() =>
+                          dayClosed
+                            ? setConfirmUnlockDay(d)
+                            : blocked
+                              ? toggleSlotBlock(d, m)
+                              : openNewAt(d, m)
+                        }
                         style={{ height: SLOT_PX }}
-                        title={offHours ? "Fuera del horario del negocio — al agendar aquí se amplía el horario" : undefined}
-                        aria-label={blocked ? `Liberar franja ${fmtSlot(m)}` : `Nueva cita ${fmtSlot(m)}`}
+                        title={
+                          dayClosed
+                            ? "Día cerrado según el horario del negocio — toca para abrirlo"
+                            : offHours
+                              ? "Fuera del horario del negocio — al agendar aquí se amplía el horario"
+                              : undefined
+                        }
+                        aria-label={
+                          dayClosed
+                            ? `Día cerrado — abrir ${DAY_NAMES[di]}`
+                            : blocked
+                              ? `Liberar franja ${fmtSlot(m)}`
+                              : `Nueva cita ${fmtSlot(m)}`
+                        }
                         className={`w-full block transition border-b ${m % 60 === 0 ? "border-white/10" : "border-white/[0.04]"} ${
-                          blocked
+                          blocked || dayClosed
                             ? "bg-[repeating-linear-gradient(45deg,rgba(244,63,94,0.35)_0_6px,transparent_6px_12px)] hover:bg-rose-500/30"
                             : offHours
                               ? "bg-black/25 hover:bg-white/[0.06]"
@@ -832,7 +866,7 @@ function Agenda() {
                         }`}
                       />
 
-                      {!taken && (
+                      {!taken && !dayClosed && (
                         <button
                           type="button"
                           onClick={(e) => {
@@ -1199,7 +1233,7 @@ function Agenda() {
 
       {confirmUnlockDay && (
         <Modal
-          title="Abrir día bloqueado"
+          title={weekHours[confirmUnlockDay.getDay()]?.closed ? "Abrir día cerrado" : "Abrir día bloqueado"}
           onClose={() => setConfirmUnlockDay(null)}
         >
           <div className="text-center">
@@ -1214,7 +1248,9 @@ function Agenda() {
               ?
             </p>
             <p className="mt-1 text-sm text-muted-foreground">
-              Al confirmar, el día volverá a estar disponible en tu agenda y en el enlace de reservas.
+              {weekHours[confirmUnlockDay.getDay()]?.closed
+                ? "Este día está marcado como cerrado en tu horario. Al confirmar se activará ese día del horario y quedará disponible en la agenda y en el enlace de reservas."
+                : "Al confirmar, el día volverá a estar disponible en tu agenda y en el enlace de reservas."}
             </p>
             <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-center">
               <Button
