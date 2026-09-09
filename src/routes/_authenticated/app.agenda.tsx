@@ -942,8 +942,8 @@ function Agenda() {
                           }}
                         style={{ height: SLOT_PX }}
                         title={
-                          dayClosed
-                             ? "Día cerrado — usa el botón Cerrado para abrirlo"
+                           dayClosed
+                              ? "Día cerrado — toca aquí o en el candado para abrir solo esta hora"
                              : fullDayBlocked
                                ? "Día bloqueado — usa Liberar día para abrirlo"
                                : blocked
