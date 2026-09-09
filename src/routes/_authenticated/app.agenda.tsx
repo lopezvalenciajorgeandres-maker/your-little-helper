@@ -1085,6 +1085,28 @@ function Agenda() {
                           </span>
                         </div>
                       )}
+                      {sessionsDone && (
+                        <div className="mt-1">
+                          {tr!.balance_cents > 0 ? (
+                            <div className="rounded bg-black/15 px-1.5 py-1 text-[10px] font-semibold">
+                              Sesiones completas · falta pagar {formatMoney(tr!.balance_cents, tenant.currency)}
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onPointerDown={(e) => e.stopPropagation()}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                closeTreatMut.mutate({ id: tr!.id });
+                              }}
+                              className="w-full rounded bg-black/20 px-1.5 py-1 text-[10px] font-bold hover:bg-black/30"
+                            >
+                              Finalizar tratamiento
+                            </button>
+                          )}
+                        </div>
+                      )}
+
                       <div className="absolute top-1 right-1 z-20 flex flex-col gap-1">
                         {tr && a.status !== "cancelled" && (
                           <Button
