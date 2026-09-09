@@ -932,17 +932,18 @@ function Agenda() {
                     <div key={m} style={{ height: SLOT_PX }} className="relative group/slot">
                       <button
                          onClick={() => {
-                           if (dayClosed || fullDayBlocked || blocked) return;
-                           if (offHours) {
-                             setConfirmOffHours({ d, m });
-                             return;
-                           }
-                           openNewAt(d, m);
-                         }}
+                            if (fullDayBlocked || blocked) return;
+                            if (offHours) {
+                              // Incluye días cerrados: permite abrir solo esta hora con confirmación.
+                              setConfirmOffHours({ d, m });
+                              return;
+                            }
+                            openNewAt(d, m);
+                          }}
                         style={{ height: SLOT_PX }}
                         title={
-                          dayClosed
-                             ? "Día cerrado — usa el botón Cerrado para abrirlo"
+                           dayClosed
+                              ? "Día cerrado — toca aquí o en el candado para abrir solo esta hora"
                              : fullDayBlocked
                                ? "Día bloqueado — usa Liberar día para abrirlo"
                                : blocked
@@ -969,7 +970,7 @@ function Agenda() {
                           }`}
                       />
 
-                       {!taken && !dayClosed && (
+                       {!taken && (
                         <button
                           type="button"
                           onClick={(e) => {
@@ -1356,8 +1357,9 @@ function Agenda() {
               ?
             </p>
             <p className="mt-1 text-sm text-muted-foreground">
-              Esa hora está fuera del horario de tu negocio. Al abrirla se amplía el horario de ese día en la tabla de
-              horarios y quedará disponible para reservas.
+              {weekHours[confirmOffHours.d.getDay()]?.closed
+                ? "Este día está marcado como cerrado. Al abrir esta hora se activa ese día en la tabla de horarios solo para esta franja, y quedará disponible para reservas."
+                : "Esa hora está fuera del horario de tu negocio. Al abrirla se amplía el horario de ese día en la tabla de horarios y quedará disponible para reservas."}
             </p>
             <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-center">
               <Button type="button" variant="outline" onClick={() => setConfirmOffHours(null)} className="w-full sm:w-auto">
