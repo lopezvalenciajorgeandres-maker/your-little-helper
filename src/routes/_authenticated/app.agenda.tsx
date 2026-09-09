@@ -1233,7 +1233,7 @@ function Agenda() {
 
       {confirmUnlockDay && (
         <Modal
-          title="Abrir día bloqueado"
+          title={weekHours[confirmUnlockDay.getDay()]?.closed ? "Abrir día cerrado" : "Abrir día bloqueado"}
           onClose={() => setConfirmUnlockDay(null)}
         >
           <div className="text-center">
@@ -1248,7 +1248,9 @@ function Agenda() {
               ?
             </p>
             <p className="mt-1 text-sm text-muted-foreground">
-              Al confirmar, el día volverá a estar disponible en tu agenda y en el enlace de reservas.
+              {weekHours[confirmUnlockDay.getDay()]?.closed
+                ? "Este día está marcado como cerrado en tu horario. Al confirmar se activará ese día del horario y quedará disponible en la agenda y en el enlace de reservas."
+                : "Al confirmar, el día volverá a estar disponible en tu agenda y en el enlace de reservas."}
             </p>
             <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-center">
               <Button
