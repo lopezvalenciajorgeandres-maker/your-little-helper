@@ -91,6 +91,8 @@ export const exportFullBackup = createServerFn({ method: "POST" })
     }
 
 
+    const hours = (await sb.from("business_hours").select("*").eq("business_id", businessId)).data ?? [];
+
     const sheets: BackupSheets = {
       [SHEETS.clients]: cl.map((c) => ({
         nombre: c.full_name,
@@ -119,12 +121,26 @@ export const exportFullBackup = createServerFn({ method: "POST" })
         email: p.email ?? "",
         activo: p.active ? "si" : "no",
       })),
+      [SHEETS.treatments]: tr.map((t) => ({
+        id: t.id,
+        cliente: t.client_id ? (clientName.get(t.client_id) ?? "") : "",
+        nombre: t.name ?? "",
+        servicio: t.service_id ? (serviceName.get(t.service_id) ?? "") : "",
+        total: (t.total_cents ?? 0) / 100,
+        sesiones: t.sessions_total ?? 1,
+        estado: t.status,
+        notas: t.notes ?? "",
+        creado_iso: t.created_at,
+        cerrado_iso: t.closed_at ?? "",
+      })),
       [SHEETS.appointments]: ap.map((a) => ({
+        id: a.id,
         inicio_iso: a.starts_at,
         fin_iso: a.ends_at,
         cliente: a.client_id ? (clientName.get(a.client_id) ?? "") : "",
         servicio: a.service_id ? (serviceName.get(a.service_id) ?? "") : "",
         profesional: a.professional_id ? (proName.get(a.professional_id) ?? "") : "",
+        tratamiento_id: a.treatment_id ?? "",
         estado: a.status,
         origen: a.origin ?? "",
         valor: (a.price_cents ?? 0) / 100,
@@ -134,6 +150,8 @@ export const exportFullBackup = createServerFn({ method: "POST" })
         fecha_iso: p.paid_at,
         cliente: p.client_id ? (clientName.get(p.client_id) ?? "") : "",
         servicio: p.service_id ? (serviceName.get(p.service_id) ?? "") : "",
+        tratamiento_id: p.treatment_id ?? "",
+        cita_id: p.appointment_id ?? "",
         abono: (p.amount_cents ?? 0) / 100,
         total: (p.total_cents ?? 0) / 100,
         metodo: p.method,
@@ -156,6 +174,15 @@ export const exportFullBackup = createServerFn({ method: "POST" })
         nota: n.body,
         privada: n.private ? "si" : "no",
       })),
+      [SHEETS.hours]: hours.map((h) => ({
+        dia: h.weekday,
+        profesional: h.professional_id ? (proName.get(h.professional_id) ?? "") : "",
+        abre: h.open_time,
+        cierra: h.close_time,
+        descanso_inicio: h.break_start ?? "",
+        descanso_fin: h.break_end ?? "",
+        cerrado: h.closed ? "si" : "no",
+      })),
       [SHEETS.balances]: cl.map((c) => {
         const total = (charged.get(c.id) ?? 0) / 100;
         const abonado = (paid.get(c.id) ?? 0) / 100;
@@ -168,6 +195,7 @@ export const exportFullBackup = createServerFn({ method: "POST" })
         };
       }),
     };
+
 
     await sb.from("backups").insert({
       business_id: businessId,
@@ -278,10 +306,46 @@ export const importFullBackup = createServerFn({ method: "POST" })
       summary.profesionales = newPros.length;
     }
 
+    // Tratamientos
+    const treatmentMap = new Map<string, string>();
+    const trRows = get(SHEETS.treatments)
+      .map((r) => {
+        const clientId = clientMap.get(nameKey(pick(r, ["cliente", "client"])));
+        if (!clientId) return null;
+        return {
+          oldId: pick(r, ["id", "id_tratamiento"]),
+          row: {
+            business_id: businessId,
+            created_by: context.userId,
+            client_id: clientId,
+            service_id: serviceMap.get(norm(pick(r, ["servicio", "service"]))) ?? null,
+            name: pick(r, ["nombre", "name"]) || null,
+            total_cents: Math.round(num(pick(r, ["total", "valor"])) * 100),
+            sessions_total: Math.max(Math.round(num(pick(r, ["sesiones", "sessions"]))) || 1, 1),
+            status: pick(r, ["estado", "status"]) || "open",
+            notes: pick(r, ["notas", "notes"]) || null,
+            closed_at: iso(pick(r, ["cerrado_iso", "cerrado"])),
+          },
+        };
+      })
+      .filter((r): r is NonNullable<typeof r> => r !== null);
+    if (trRows.length) {
+      const { data: ins, error } = await sb
+        .from("treatments")
+        .insert(trRows.map((t) => t.row))
+        .select("id");
+      if (error) throw new Error(error.message);
+      (ins ?? []).forEach((t, i) => {
+        const old = trRows[i]?.oldId;
+        if (old) treatmentMap.set(old, t.id);
+      });
+      summary.tratamientos = trRows.length;
+    }
+
     // Citas
     const existingAppts = (await sb.from("appointments").select("client_id, starts_at").eq("business_id", businessId)).data ?? [];
     const apptKeys = new Set(existingAppts.map((a) => `${a.client_id}|${a.starts_at}`));
-    const newAppts = get(SHEETS.appointments)
+    const apptRows = get(SHEETS.appointments)
       .map((r) => {
         const starts = iso(pick(r, ["inicio_iso", "inicio", "fecha", "starts_at"]));
         const clientId = clientMap.get(nameKey(pick(r, ["cliente", "client", "nombre"])));
@@ -290,37 +354,59 @@ export const importFullBackup = createServerFn({ method: "POST" })
         apptKeys.add(`${clientId}|${starts}`);
         const ends = iso(pick(r, ["fin_iso", "fin", "ends_at"])) ?? new Date(new Date(starts).getTime() + 3600000).toISOString();
         return {
-          business_id: businessId,
-          owner_id: context.userId,
-          client_id: clientId,
-          service_id: serviceMap.get(norm(pick(r, ["servicio", "service"]))) ?? null,
-          professional_id: proMap.get(norm(pick(r, ["profesional", "professional"]))) ?? null,
-          starts_at: starts,
-          ends_at: ends,
-          status: pick(r, ["estado", "status"]) || "confirmada",
-          origin: pick(r, ["origen", "origin"]) || "manual",
-          price_cents: Math.round(num(pick(r, ["valor", "precio", "price"])) * 100),
-          notes: pick(r, ["notas", "notes"]) || null,
+          oldId: pick(r, ["id", "id_cita"]),
+          row: {
+            business_id: businessId,
+            owner_id: context.userId,
+            client_id: clientId,
+            service_id: serviceMap.get(norm(pick(r, ["servicio", "service"]))) ?? null,
+            professional_id: proMap.get(norm(pick(r, ["profesional", "professional"]))) ?? null,
+            treatment_id: treatmentMap.get(pick(r, ["tratamiento_id", "tratamiento"])) ?? null,
+            starts_at: starts,
+            ends_at: ends,
+            status: pick(r, ["estado", "status"]) || "confirmada",
+            origin: pick(r, ["origen", "origin"]) || "manual",
+            price_cents: Math.round(num(pick(r, ["valor", "precio", "price"])) * 100),
+            notes: pick(r, ["notas", "notes"]) || null,
+          },
         };
       })
       .filter((r): r is NonNullable<typeof r> => r !== null);
-    if (newAppts.length) {
-      const { error } = await sb.from("appointments").insert(newAppts);
+    const apptMap = new Map<string, string>();
+    if (apptRows.length) {
+      const { data: ins, error } = await sb
+        .from("appointments")
+        .insert(apptRows.map((a) => a.row))
+        .select("id");
       if (error) throw new Error(error.message);
-      summary.citas = newAppts.length;
+      (ins ?? []).forEach((a, i) => {
+        const old = apptRows[i]?.oldId;
+        if (old) apptMap.set(old, a.id);
+      });
+      summary.citas = apptRows.length;
     }
 
     // Pagos / abonos
+    const existingPayments =
+      (await sb.from("payments").select("client_id, paid_at, amount_cents").eq("business_id", businessId)).data ?? [];
+    const payKeys = new Set(existingPayments.map((p) => `${p.client_id}|${p.paid_at}|${p.amount_cents}`));
     const newPayments = get(SHEETS.payments)
       .map((r) => {
         const paid_at = iso(pick(r, ["fecha_iso", "fecha", "paid_at"]));
         if (!paid_at) return null;
         const amount = num(pick(r, ["abono", "importe", "monto", "amount"]));
+        const clientId = clientMap.get(nameKey(pick(r, ["cliente", "client"]))) ?? null;
+        const cents = Math.round(amount * 100);
+        const key = `${clientId}|${paid_at}|${cents}`;
+        if (payKeys.has(key)) return null;
+        payKeys.add(key);
         return {
           business_id: businessId,
-          client_id: clientMap.get(nameKey(pick(r, ["cliente", "client"]))) ?? null,
+          client_id: clientId,
           service_id: serviceMap.get(norm(pick(r, ["servicio", "service"]))) ?? null,
-          amount_cents: Math.round(amount * 100),
+          treatment_id: treatmentMap.get(pick(r, ["tratamiento_id", "tratamiento"])) ?? null,
+          appointment_id: apptMap.get(pick(r, ["cita_id", "cita"])) ?? null,
+          amount_cents: cents,
           total_cents: Math.round(num(pick(r, ["total"])) * 100) || null,
           method: pick(r, ["metodo", "method"]) || "efectivo",
           bank: pick(r, ["banco", "bank"]) || null,
@@ -337,17 +423,24 @@ export const importFullBackup = createServerFn({ method: "POST" })
     }
 
     // Gastos
+    const existingExpenses =
+      (await sb.from("expenses").select("spent_at, description, amount_cents").eq("business_id", businessId)).data ?? [];
+    const expKeys = new Set(existingExpenses.map((e) => `${e.spent_at}|${norm(e.description)}|${e.amount_cents}`));
     const newExpenses = get(SHEETS.expenses)
       .map((r) => {
         const spent_at = iso(pick(r, ["fecha_iso", "fecha", "spent_at"]));
         const description = pick(r, ["descripcion", "description"]);
         if (!spent_at || !description) return null;
+        const cents = Math.round(num(pick(r, ["importe", "monto", "valor"])) * 100);
+        const key = `${spent_at}|${norm(description)}|${cents}`;
+        if (expKeys.has(key)) return null;
+        expKeys.add(key);
         return {
           business_id: businessId,
           created_by: context.userId,
           category: pick(r, ["categoria", "category"]) || "otros",
           description,
-          amount_cents: Math.round(num(pick(r, ["importe", "monto", "valor"])) * 100),
+          amount_cents: cents,
           method: pick(r, ["metodo", "method"]) || "efectivo",
           supplier: pick(r, ["proveedor", "supplier"]) || null,
           spent_at,
@@ -362,11 +455,16 @@ export const importFullBackup = createServerFn({ method: "POST" })
     }
 
     // Notas de clientes
+    const existingNotes = (await sb.from("client_notes").select("client_id, body").eq("business_id", businessId)).data ?? [];
+    const noteKeys = new Set(existingNotes.map((n) => `${n.client_id}|${norm(n.body)}`));
     const newNotes = get(SHEETS.notes)
       .map((r) => {
         const clientId = clientMap.get(nameKey(pick(r, ["cliente", "client"])));
         const body = pick(r, ["nota", "notas", "body"]);
         if (!clientId || !body) return null;
+        const key = `${clientId}|${norm(body)}`;
+        if (noteKeys.has(key)) return null;
+        noteKeys.add(key);
         return {
           business_id: businessId,
           client_id: clientId,
@@ -381,6 +479,36 @@ export const importFullBackup = createServerFn({ method: "POST" })
       if (error) throw new Error(error.message);
       summary.notas = newNotes.length;
     }
+
+    // Horarios de atención
+    const hourRows = get(SHEETS.hours)
+      .map((r) => {
+        const weekday = Math.round(num(pick(r, ["dia", "weekday"])));
+        const open_time = pick(r, ["abre", "open_time", "apertura"]);
+        const close_time = pick(r, ["cierra", "close_time", "cierre"]);
+        if (!open_time || !close_time || weekday < 0 || weekday > 6) return null;
+        return {
+          business_id: businessId,
+          professional_id: proMap.get(norm(pick(r, ["profesional", "professional"]))) ?? null,
+          weekday,
+          open_time,
+          close_time,
+          break_start: pick(r, ["descanso_inicio", "break_start"]) || null,
+          break_end: pick(r, ["descanso_fin", "break_end"]) || null,
+          closed: pick(r, ["cerrado", "closed"]).toLowerCase() === "si",
+        };
+      })
+      .filter((r): r is NonNullable<typeof r> => r !== null);
+    if (hourRows.length) {
+      const globals = hourRows.filter((h) => !h.professional_id).map((h) => h.weekday);
+      if (globals.length) {
+        await sb.from("business_hours").delete().eq("business_id", businessId).is("professional_id", null).in("weekday", globals);
+      }
+      const { error } = await sb.from("business_hours").insert(hourRows);
+      if (error) throw new Error(error.message);
+      summary.horarios = hourRows.length;
+    }
+
 
     return summary;
   });
