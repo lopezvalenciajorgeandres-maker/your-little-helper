@@ -1850,13 +1850,11 @@ function EditTimeModal({
   );
 }
 
-/** Ámbar cálido (sin pagar) → verde cálido (pagado) según el avance de los abonos. */
-function payProgressColor(ratio: number, hasPayment: boolean) {
-  const t = Math.max(0, Math.min(1, ratio));
-  // Sin abono: ámbar cálido. Con abono y saldo pendiente: verde pastel claro. Pagado total: verde cálido.
-  if (!hasPayment) return "#E8A33D";
-  if (t >= 1) return "#34D399";
-  return "#D1FAE5";
+/** Ámbar cálido (sin abono en la cita) → verde pastel claro (abono parcial en la cita) → verde cálido (tratamiento pagado). */
+function payProgressColor(ratio: number, hasApptPayment: boolean, fullyPaid: boolean) {
+  if (fullyPaid) return "#34D399";
+  if (hasApptPayment) return "#D1FAE5";
+  return "#E8A33D";
 }
 
 function readableText(hex: string) {
