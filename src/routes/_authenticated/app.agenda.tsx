@@ -844,7 +844,7 @@ function Agenda() {
                   key={m}
                   style={{ height: SLOT_PX }}
                   className={`group/row relative flex items-center justify-end gap-1 pr-2 border-b border-white/5 text-[10px] ${
-                    rowBlocked ? "bg-primary/15" : ""
+                    rowBlocked ? "bg-lavender/15" : ""
                   } ${m % 60 === 0 ? "text-neutral-300 font-medium" : "text-neutral-500"}`}
                 >
                   <button
@@ -858,8 +858,8 @@ function Agenda() {
                     aria-label={rowBlocked ? `Abrir franja ${fmtSlot(m)} de la semana` : `Cerrar franja ${fmtSlot(m)} de la semana`}
                     className={`shrink-0 rounded p-0.5 transition ${
                       rowBlocked
-                        ? "text-primary hover:text-primary/80"
-                        : "text-neutral-500 hover:text-primary"
+                        ? "text-lavender hover:text-lavender/80"
+                        : "text-neutral-500 hover:text-lavender"
                     }`}
                   >
                     {rowBlocked ? <Lock className="h-3 w-3" /> : <LockOpen className="h-3 w-3" />}
