@@ -970,7 +970,7 @@ function Agenda() {
                           }`}
                       />
 
-                       {!taken && !dayClosed && (
+                       {!taken && (
                         <button
                           type="button"
                           onClick={(e) => {
