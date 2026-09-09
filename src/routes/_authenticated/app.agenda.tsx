@@ -84,6 +84,7 @@ function Agenda() {
   const [confirmUnlockDay, setConfirmUnlockDay] = useState<Date | null>(null);
   const [confirmUnlockSlot, setConfirmUnlockSlot] = useState<{ d: Date; m: number } | null>(null);
   const [confirmUnlockRow, setConfirmUnlockRow] = useState<number | null>(null);
+  const [confirmLockRow, setConfirmLockRow] = useState<number | null>(null);
   const [drag, setDrag] = useState<{
     id: string;
     grabDy: number;
@@ -611,11 +612,20 @@ function Agenda() {
       setConfirmUnlockRow(minutes);
       return;
     }
-    // Bloquear: solo los días que aún no están bloqueados ni cerrados.
+    // Bloquear: pedimos confirmación antes de cerrar la franja en toda la semana.
+    const pendientes = days.filter(
+      (d) => !weekHours[d.getDay()]?.closed && !isSlotBlocked(d, minutes),
+    );
+    if (pendientes.length === 0) return;
+    setConfirmLockRow(minutes);
+  }
+
+  function confirmRowLock() {
+    if (confirmLockRow == null) return;
     const rows = days
-      .filter((d) => !weekHours[d.getDay()]?.closed && !isSlotBlocked(d, minutes))
+      .filter((d) => !weekHours[d.getDay()]?.closed && !isSlotBlocked(d, confirmLockRow))
       .map((d) => {
-        const { s, e } = slotRange(d, minutes);
+        const { s, e } = slotRange(d, confirmLockRow);
         return {
           starts_at: s.toISOString(),
           ends_at: e.toISOString(),
@@ -623,8 +633,11 @@ function Agenda() {
           reason: "Horario no disponible",
         };
       });
-    if (rows.length === 0) return;
-    blockManyMut.mutate(rows);
+    if (rows.length === 0) {
+      setConfirmLockRow(null);
+      return;
+    }
+    blockManyMut.mutate(rows, { onSettled: () => setConfirmLockRow(null) });
   }
 
   function confirmRowUnlock() {
@@ -1320,6 +1333,38 @@ function Agenda() {
                 className="w-full sm:w-auto"
               >
                 {openSlotMut.isPending ? "Abriendo…" : "Sí, abrir esta hora"}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {confirmLockRow != null && (
+        <Modal title="Cerrar esta franja en la semana" onClose={() => setConfirmLockRow(null)}>
+          <div className="text-center">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-rose-500/15 text-rose-500">
+              <Lock className="h-7 w-7" />
+            </div>
+            <p className="text-base text-foreground">
+              ¿Deseas cerrar las <span className="font-semibold">{fmtSlot(confirmLockRow)}</span> en todos los días de
+              esta semana?
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Ideal para separar el horario de desayuno, almuerzo u otras pausas. Los días cerrados o ya bloqueados se
+              respetan.
+            </p>
+            <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-center">
+              <Button type="button" variant="outline" onClick={() => setConfirmLockRow(null)} className="w-full sm:w-auto">
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={confirmRowLock}
+                disabled={blockManyMut.isPending}
+                className="w-full sm:w-auto"
+              >
+                {blockManyMut.isPending ? "Cerrando…" : "Sí, cerrar la franja"}
               </Button>
             </div>
           </div>
