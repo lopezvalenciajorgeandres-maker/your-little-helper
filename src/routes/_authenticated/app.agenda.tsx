@@ -1839,12 +1839,12 @@ function EditTimeModal({
 }
 
 /** Ámbar cálido (sin pagar) → verde cálido (pagado) según el avance de los abonos. */
-function payProgressColor(ratio: number) {
+function payProgressColor(ratio: number, hasPayment: boolean) {
   const t = Math.max(0, Math.min(1, ratio));
-  const from = [232, 163, 61];
-  const to = [104, 190, 132];
-  const mix = from.map((c, i) => Math.round(c + (to[i]! - c) * t));
-  return `#${mix.map((c) => c.toString(16).padStart(2, "0")).join("")}`;
+  // Sin abono: ámbar cálido. Con abono y saldo pendiente: verde pastel claro. Pagado total: verde cálido.
+  if (!hasPayment) return "#E8A33D";
+  if (t >= 1) return "#34D399";
+  return "#D1FAE5";
 }
 
 function readableText(hex: string) {
