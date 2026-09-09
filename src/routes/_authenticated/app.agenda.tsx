@@ -1196,6 +1196,48 @@ function Agenda() {
           closingTreatment={closeTreatMut.isPending}
         />
       )}
+
+      {confirmUnlockDay && (
+        <Modal
+          title="Abrir día bloqueado"
+          onClose={() => setConfirmUnlockDay(null)}
+        >
+          <div className="text-center">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-rose-500/15 text-rose-500">
+              <LockOpen className="h-7 w-7" />
+            </div>
+            <p className="text-base text-foreground">
+              ¿Quieres abrir el{" "}
+              <span className="font-semibold">
+                {confirmUnlockDay.toLocaleDateString("es", { weekday: "long", day: "numeric", month: "long" })}
+              </span>
+              ?
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Al confirmar, el día volverá a estar disponible en tu agenda y en el enlace de reservas.
+            </p>
+            <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-center">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setConfirmUnlockDay(null)}
+                className="w-full sm:w-auto"
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={confirmDayUnlock}
+                disabled={unblockMut.isPending}
+                className="w-full sm:w-auto"
+              >
+                {unblockMut.isPending ? "Abriendo…" : "Sí, abrir día"}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
