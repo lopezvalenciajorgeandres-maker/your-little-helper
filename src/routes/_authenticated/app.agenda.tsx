@@ -1303,7 +1303,7 @@ function Agenda() {
       {confirmUnlockSlot && (
         <Modal title="Abrir esta hora" onClose={() => setConfirmUnlockSlot(null)}>
           <div className="text-center">
-            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-rose-500/15 text-rose-500">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/15 text-primary">
               <LockOpen className="h-7 w-7" />
             </div>
             <p className="text-base text-foreground">
@@ -1344,7 +1344,7 @@ function Agenda() {
       {confirmLockRow != null && (
         <Modal title="Cerrar esta franja en la semana" onClose={() => setConfirmLockRow(null)}>
           <div className="text-center">
-            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-rose-500/15 text-rose-500">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/15 text-primary">
               <Lock className="h-7 w-7" />
             </div>
             <p className="text-base text-foreground">
@@ -1376,7 +1376,7 @@ function Agenda() {
       {confirmUnlockRow != null && (
         <Modal title="Abrir esta franja en la semana" onClose={() => setConfirmUnlockRow(null)}>
           <div className="text-center">
-            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-rose-500/15 text-rose-500">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/15 text-primary">
               <LockOpen className="h-7 w-7" />
             </div>
             <p className="text-base text-foreground">
@@ -1410,7 +1410,7 @@ function Agenda() {
           onClose={() => setConfirmUnlockDay(null)}
         >
           <div className="text-center">
-            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-rose-500/15 text-rose-500">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/15 text-primary">
               <LockOpen className="h-7 w-7" />
             </div>
             <p className="text-base text-foreground">
