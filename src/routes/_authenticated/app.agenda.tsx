@@ -141,6 +141,73 @@ function Agenda() {
     kind: string;
   }>;
 
+  // Horario del negocio (tabla de Ajustes / registro) → define la agenda
+  const weekHours = useMemo<DayHours[]>(() => {
+    const rows = (schedule.data?.hours ?? []) as DayHours[];
+    return Array.from({ length: 7 }, (_, weekday) => {
+      const found = rows.find((h) => h.weekday === weekday);
+      return found ? { ...found, weekday } : { weekday, ...DEFAULT_DAY };
+    });
+  }, [schedule.data]);
+
+  const hoursForWeekday = (weekday: number) => weekHours[weekday];
+
+  const HOURS = useMemo(() => {
+    const open = weekHours.filter((h) => !h.closed);
+    const min = open.length ? Math.min(...open.map((h) => toMin(h.open_time))) : 9 * 60;
+    const max = open.length ? Math.max(...open.map((h) => toMin(h.close_time))) : 18 * 60;
+    const startHour = Math.max(0, Math.floor(min / 60));
+    const endHour = Math.min(24, Math.ceil(max / 60));
+    const length = Math.max(1, endHour - startHour);
+    return Array.from({ length }, (_, i) => startHour + i);
+  }, [weekHours]);
+
+  const SLOTS = useMemo(
+    () => Array.from({ length: HOURS.length * (60 / SLOT_MIN) }, (_, i) => HOURS[0] * 60 + i * SLOT_MIN),
+    [HOURS],
+  );
+
+  const persistHours = useServerFn(saveHours);
+  const hoursMut = useMutation({
+    mutationFn: (hours: DayHours[]) =>
+      persistHours({
+        data: {
+          hours: hours.map((h) => ({
+            weekday: h.weekday,
+            open_time: h.open_time,
+            close_time: h.close_time,
+            break_start: h.break_start,
+            break_end: h.break_end,
+            closed: h.closed,
+          })),
+        },
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["schedule"] }),
+    onError: (e: any) => toast.error(e?.message ?? "No se pudo actualizar el horario"),
+  });
+
+  // Si una cita queda fuera del horario del día, se amplía el horario guardado.
+  function syncHoursWithAppointment(date: Date, startMin: number, endMin: number) {
+    const weekday = date.getDay();
+    const current = weekHours[weekday];
+    const open = current.closed ? startMin : Math.min(toMin(current.open_time), startMin);
+    const close = current.closed ? endMin : Math.max(toMin(current.close_time), endMin);
+    if (!current.closed && open === toMin(current.open_time) && close === toMin(current.close_time)) return;
+    const next = weekHours.map((h) =>
+      h.weekday === weekday
+        ? { ...h, closed: false, open_time: toTime(Math.max(0, open)), close_time: toTime(Math.min(24 * 60 - 1, close)) }
+        : h,
+    );
+    hoursMut.mutate(next, {
+      onSuccess: () =>
+        toast.success(
+          `Horario del ${date.toLocaleDateString("es", { weekday: "long" })} actualizado: ${toTime(open)} – ${toTime(close)}`,
+        ),
+    });
+  }
+
+
+
   const blockMut = useMutation({
     mutationFn: (v: { starts_at: string; ends_at: string; reason?: string | null; kind?: string }) =>
       addBlock({ data: { kind: "bloqueo", ...v } }),
