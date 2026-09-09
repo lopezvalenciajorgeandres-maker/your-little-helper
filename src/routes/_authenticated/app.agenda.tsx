@@ -815,6 +815,7 @@ function Agenda() {
           {/* Day columns */}
           {days.map((d, di) => {
             const dayAppts = (appts.data ?? []).filter((a) => isSameDay(new Date(a.starts_at), d));
+            const fullDayBlocked = isDayFullyBlocked(d);
             return (
               <div key={di} className="relative border-r border-white/5 last:border-r-0">
                 {SLOTS.map((m) => {
@@ -835,26 +836,29 @@ function Agenda() {
                   return (
                     <div key={m} style={{ height: SLOT_PX }} className="relative group/slot">
                       <button
-                        onClick={() =>
-                          dayClosed
-                            ? setConfirmUnlockDay(d)
-                            : blocked
-                              ? toggleSlotBlock(d, m)
-                              : openNewAt(d, m)
-                        }
+                         onClick={() => {
+                           if (dayClosed || fullDayBlocked || blocked) return;
+                           openNewAt(d, m);
+                         }}
                         style={{ height: SLOT_PX }}
                         title={
                           dayClosed
-                            ? "Día cerrado según el horario del negocio — toca para abrirlo"
+                             ? "Día cerrado — usa el botón Cerrado para abrirlo"
+                             : fullDayBlocked
+                               ? "Día bloqueado — usa Liberar día para abrirlo"
+                               : blocked
+                                 ? "Franja bloqueada — usa el candado para liberarla"
                             : offHours
                               ? "Fuera del horario del negocio — al agendar aquí se amplía el horario"
                               : undefined
                         }
                         aria-label={
                           dayClosed
-                            ? `Día cerrado — abrir ${DAY_NAMES[di]}`
+                             ? `Día cerrado ${DAY_NAMES[di]}`
+                             : fullDayBlocked
+                               ? `Día bloqueado ${DAY_NAMES[di]}`
                             : blocked
-                              ? `Liberar franja ${fmtSlot(m)}`
+                               ? `Franja bloqueada ${fmtSlot(m)}`
                               : `Nueva cita ${fmtSlot(m)}`
                         }
                         className={`w-full block transition border-b ${m % 60 === 0 ? "border-white/10" : "border-white/[0.04]"} ${
@@ -866,20 +870,24 @@ function Agenda() {
                         }`}
                       />
 
-                      {!taken && !dayClosed && (
+                       {!taken && !dayClosed && (
                         <button
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            toggleSlotBlock(d, m);
+                             if (fullDayBlocked) {
+                               setConfirmUnlockDay(d);
+                               return;
+                             }
+                             toggleSlotBlock(d, m);
                           }}
                           className={`absolute right-0.5 top-0.5 z-10 rounded p-0.5 transition ${
                             blocked
                               ? "bg-rose-500 text-white opacity-100"
                               : "bg-white/15 text-neutral-100 opacity-0 group-hover/slot:opacity-100"
                           }`}
-                          aria-label={blocked ? `Liberar franja ${fmtSlot(m)}` : `Bloquear franja ${fmtSlot(m)}`}
-                          title={blocked ? "Franja bloqueada — toca para liberar" : "Bloquear esta franja"}
+                           aria-label={fullDayBlocked ? `Abrir confirmación para liberar ${DAY_NAMES[di]}` : blocked ? `Liberar franja ${fmtSlot(m)}` : `Bloquear franja ${fmtSlot(m)}`}
+                           title={fullDayBlocked ? "Día bloqueado — confirmar apertura" : blocked ? "Franja bloqueada — toca para liberar" : "Bloquear esta franja"}
                         >
                           {blocked ? <LockOpen className="h-2.5 w-2.5" /> : <Lock className="h-2.5 w-2.5" />}
                         </button>
