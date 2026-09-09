@@ -136,6 +136,7 @@ function Agenda() {
     queryFn: () => getTreatments(),
     
   });
+  const receivables = useQuery({ queryKey: ["receivables"], queryFn: () => getReceivables() });
   const getSchedule = useServerFn(listHours);
   const addBlock = useServerFn(createBlock);
   const removeBlock = useServerFn(deleteBlock);
