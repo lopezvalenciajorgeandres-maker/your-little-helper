@@ -612,11 +612,20 @@ function Agenda() {
       setConfirmUnlockRow(minutes);
       return;
     }
-    // Bloquear: solo los días que aún no están bloqueados ni cerrados.
+    // Bloquear: pedimos confirmación antes de cerrar la franja en toda la semana.
+    const pendientes = days.filter(
+      (d) => !weekHours[d.getDay()]?.closed && !isSlotBlocked(d, minutes),
+    );
+    if (pendientes.length === 0) return;
+    setConfirmLockRow(minutes);
+  }
+
+  function confirmRowLock() {
+    if (confirmLockRow == null) return;
     const rows = days
-      .filter((d) => !weekHours[d.getDay()]?.closed && !isSlotBlocked(d, minutes))
+      .filter((d) => !weekHours[d.getDay()]?.closed && !isSlotBlocked(d, confirmLockRow))
       .map((d) => {
-        const { s, e } = slotRange(d, minutes);
+        const { s, e } = slotRange(d, confirmLockRow);
         return {
           starts_at: s.toISOString(),
           ends_at: e.toISOString(),
@@ -624,8 +633,11 @@ function Agenda() {
           reason: "Horario no disponible",
         };
       });
-    if (rows.length === 0) return;
-    blockManyMut.mutate(rows);
+    if (rows.length === 0) {
+      setConfirmLockRow(null);
+      return;
+    }
+    blockManyMut.mutate(rows, { onSettled: () => setConfirmLockRow(null) });
   }
 
   function confirmRowUnlock() {
