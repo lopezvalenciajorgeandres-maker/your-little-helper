@@ -554,7 +554,7 @@ function Agenda() {
 
   function toggleDayBlock(d: Date) {
     const existing = dayBlocks(d);
-    if (existing.length > 0) {
+    if (existing.length > 0 || weekHours[d.getDay()]?.closed) {
       setConfirmUnlockDay(d);
       return;
     }
