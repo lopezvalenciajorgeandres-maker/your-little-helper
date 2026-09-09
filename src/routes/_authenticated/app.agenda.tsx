@@ -1020,7 +1020,11 @@ function Agenda() {
                           (t) => t.client_id === (a as any).client_id && t.status === "open",
                         )) ?? null;
                   const trPendingSessions = tr ? Math.max(0, tr.sessions_total - tr.sessions_done) : 0;
-                  const trReady = !!tr && tr.status === "open" && tr.balance_cents <= 0;
+                  const sessionsDone = !!tr && tr.status === "open" && trPendingSessions === 0;
+                  const trReady = sessionsDone && tr!.balance_cents <= 0;
+                  const payRatio = tr && tr.total_cents > 0 ? Math.min(1, tr.paid_cents / tr.total_cents) : 0;
+                  const cardColor = sessionsDone ? payProgressColor(payRatio) : color;
+
                   const dragging = drag?.id === a.id && drag.moved;
                   const previewTop = dragging ? ((drag!.minutes - HOURS[0] * 60) / 60) * SLOT_HEIGHT : top;
 
@@ -1033,8 +1037,9 @@ function Agenda() {
                       style={{
                         top,
                         height,
-                        background: color,
-                        color: readableText(color),
+                        background: cardColor,
+                        color: readableText(cardColor),
+
                         transform: dragging
                           ? `translate(${(drag!.dayIndex - di) * drag!.colWidth}px, ${previewTop - top}px)`
                           : undefined,
@@ -1080,6 +1085,28 @@ function Agenda() {
                           </span>
                         </div>
                       )}
+                      {sessionsDone && (
+                        <div className="mt-1">
+                          {tr!.balance_cents > 0 ? (
+                            <div className="rounded bg-black/15 px-1.5 py-1 text-[10px] font-semibold">
+                              Sesiones completas · falta pagar {formatMoney(tr!.balance_cents, tenant.currency)}
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onPointerDown={(e) => e.stopPropagation()}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                closeTreatMut.mutate({ id: tr!.id });
+                              }}
+                              className="w-full rounded bg-black/20 px-1.5 py-1 text-[10px] font-bold hover:bg-black/30"
+                            >
+                              Finalizar tratamiento
+                            </button>
+                          )}
+                        </div>
+                      )}
+
                       <div className="absolute top-1 right-1 z-20 flex flex-col gap-1">
                         {tr && a.status !== "cancelled" && (
                           <Button
@@ -1810,7 +1837,17 @@ function EditTimeModal({
   );
 }
 
+/** Ámbar cálido (sin pagar) → verde cálido (pagado) según el avance de los abonos. */
+function payProgressColor(ratio: number) {
+  const t = Math.max(0, Math.min(1, ratio));
+  const from = [232, 163, 61];
+  const to = [104, 190, 132];
+  const mix = from.map((c, i) => Math.round(c + (to[i]! - c) * t));
+  return `#${mix.map((c) => c.toString(16).padStart(2, "0")).join("")}`;
+}
+
 function readableText(hex: string) {
+
   const h = hex.replace("#", "");
   if (h.length !== 6) return "#1a1512";
   const r = parseInt(h.slice(0, 2), 16);
