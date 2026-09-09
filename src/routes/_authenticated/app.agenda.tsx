@@ -942,7 +942,7 @@ function Agenda() {
                           }}
                           className={`absolute right-0.5 top-0.5 z-10 rounded p-0.5 transition ${
                             blocked
-                               ? "bg-primary text-primary-foreground opacity-100"
+                               ? "bg-lavender text-ink opacity-100"
                                : "bg-white/15 text-neutral-100 opacity-0 group-hover/slot:opacity-100"
                           }`}
                            aria-label={blocked ? `Abrir solo la franja ${fmtSlot(m)}` : `Bloquear franja ${fmtSlot(m)}`}
