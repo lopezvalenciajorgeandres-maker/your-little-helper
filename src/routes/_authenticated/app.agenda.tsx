@@ -15,6 +15,7 @@ import { BackupButtons } from "@/components/app/backup-buttons";
 import { closeTreatment, createTreatment, listTreatments, updateTreatment, type TreatmentSummary } from "@/lib/treatments.functions";
 import { useTenant } from "@/lib/use-tenant";
 import { formatMoney } from "@/lib/plan";
+import { listReceivables } from "@/lib/payments.functions";
 
 
 export const Route = createFileRoute("/_authenticated/app/agenda")({
@@ -116,6 +117,7 @@ function Agenda() {
   const closeTreat = useServerFn(closeTreatment);
   const completeAppt = useServerFn(completeAppointmentSession);
   const getTreatments = useServerFn(listTreatments);
+  const getReceivables = useServerFn(listReceivables);
   const tenant = useTenant();
 
   const from = new Date(weekStart);
@@ -134,6 +136,7 @@ function Agenda() {
     queryFn: () => getTreatments(),
     
   });
+  const receivables = useQuery({ queryKey: ["receivables"], queryFn: () => getReceivables() });
   const getSchedule = useServerFn(listHours);
   const addBlock = useServerFn(createBlock);
   const removeBlock = useServerFn(deleteBlock);
@@ -171,6 +174,14 @@ function Agenda() {
     () => Array.from({ length: HOURS.length * (60 / SLOT_MIN) }, (_, i) => HOURS[0] * 60 + i * SLOT_MIN),
     [HOURS],
   );
+
+  const paidByAppt = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const r of receivables.data ?? []) {
+      if (r.appointment_id) map.set(r.appointment_id, r.paid_cents ?? 0);
+    }
+    return map;
+  }, [receivables.data]);
 
   const persistHours = useServerFn(saveHours);
   const hoursMut = useMutation({
@@ -1023,8 +1034,9 @@ function Agenda() {
                   const sessionsDone = !!tr && tr.status === "open" && trPendingSessions === 0;
                   const trReady = sessionsDone && tr!.balance_cents <= 0;
                   const payRatio = tr && tr.total_cents > 0 ? Math.min(1, tr.paid_cents / tr.total_cents) : 0;
-                  const hasPayment = !!tr && tr.paid_cents > 0;
-                  const cardColor = sessionsDone ? payProgressColor(payRatio, hasPayment) : color;
+                  const apptPaid = paidByAppt.get(a.id) ?? 0;
+                  const trFullyPaid = !!tr && tr.total_cents > 0 && tr.paid_cents >= tr.total_cents;
+                  const cardColor = sessionsDone ? payProgressColor(payRatio, apptPaid > 0, trFullyPaid) : color;
 
                   const dragging = drag?.id === a.id && drag.moved;
                   const previewTop = dragging ? ((drag!.minutes - HOURS[0] * 60) / 60) * SLOT_HEIGHT : top;
@@ -1838,13 +1850,11 @@ function EditTimeModal({
   );
 }
 
-/** Ámbar cálido (sin pagar) → verde cálido (pagado) según el avance de los abonos. */
-function payProgressColor(ratio: number, hasPayment: boolean) {
-  const t = Math.max(0, Math.min(1, ratio));
-  // Sin abono: ámbar cálido. Con abono y saldo pendiente: verde pastel claro. Pagado total: verde cálido.
-  if (!hasPayment) return "#E8A33D";
-  if (t >= 1) return "#34D399";
-  return "#D1FAE5";
+/** Ámbar cálido (sin abono en la cita) → verde pastel claro (abono parcial en la cita) → verde cálido (tratamiento pagado). */
+function payProgressColor(ratio: number, hasApptPayment: boolean, fullyPaid: boolean) {
+  if (fullyPaid) return "#34D399";
+  if (hasApptPayment) return "#D1FAE5";
+  return "#E8A33D";
 }
 
 function readableText(hex: string) {
