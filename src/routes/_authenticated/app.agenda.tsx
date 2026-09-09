@@ -229,6 +229,16 @@ function Agenda() {
     onError: (e: any) => toast.error(e?.message ?? "No se pudo liberar el bloqueo"),
   });
 
+  const openSlotFn = useServerFn(openSlot);
+  const openSlotMut = useMutation({
+    mutationFn: (v: { starts_at: string; ends_at: string }) => openSlotFn({ data: v }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["schedule"] });
+      toast.success("Hora abierta — solo esa franja quedó disponible");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "No se pudo abrir la hora"),
+  });
+
   const blockManyMut = useMutation({
     mutationFn: (rows: { starts_at: string; ends_at: string; reason?: string | null; kind?: string }[]) =>
       Promise.all(rows.map((v) => addBlock({ data: { kind: "bloqueo", ...v } }))),
