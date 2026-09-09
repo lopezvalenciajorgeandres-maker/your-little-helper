@@ -907,8 +907,8 @@ function Agenda() {
                               ? "bg-rose-500 text-white opacity-100"
                               : "bg-white/15 text-neutral-100 opacity-0 group-hover/slot:opacity-100"
                           }`}
-                           aria-label={fullDayBlocked ? `Abrir confirmación para liberar ${DAY_NAMES[di]}` : blocked ? `Liberar franja ${fmtSlot(m)}` : `Bloquear franja ${fmtSlot(m)}`}
-                           title={fullDayBlocked ? "Día bloqueado — confirmar apertura" : blocked ? "Franja bloqueada — toca para liberar" : "Bloquear esta franja"}
+                           aria-label={blocked ? `Abrir solo la franja ${fmtSlot(m)}` : `Bloquear franja ${fmtSlot(m)}`}
+                           title={blocked ? "Abrir solo esta hora (pide confirmación)" : "Bloquear esta franja"}
                         >
                           {blocked ? <LockOpen className="h-2.5 w-2.5" /> : <Lock className="h-2.5 w-2.5" />}
                         </button>
@@ -1258,6 +1258,47 @@ function Agenda() {
           onCloseTreatment={(v) => closeTreatMut.mutate(v)}
           closingTreatment={closeTreatMut.isPending}
         />
+      )}
+
+      {confirmUnlockSlot && (
+        <Modal title="Abrir esta hora" onClose={() => setConfirmUnlockSlot(null)}>
+          <div className="text-center">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-rose-500/15 text-rose-500">
+              <LockOpen className="h-7 w-7" />
+            </div>
+            <p className="text-base text-foreground">
+              ¿Deseas abrir solo las{" "}
+              <span className="font-semibold">{fmtSlot(confirmUnlockSlot.m)}</span> del{" "}
+              <span className="font-semibold">
+                {confirmUnlockSlot.d.toLocaleDateString("es", { weekday: "long", day: "numeric", month: "long" })}
+              </span>
+              ?
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              El resto del bloqueo se mantiene. Solo esa franja quedará disponible en tu agenda y en el enlace de
+              reservas.
+            </p>
+            <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-center">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setConfirmUnlockSlot(null)}
+                className="w-full sm:w-auto"
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={confirmSlotUnlock}
+                disabled={openSlotMut.isPending}
+                className="w-full sm:w-auto"
+              >
+                {openSlotMut.isPending ? "Abriendo…" : "Sí, abrir esta hora"}
+              </Button>
+            </div>
+          </div>
+        </Modal>
       )}
 
       {confirmUnlockDay && (
