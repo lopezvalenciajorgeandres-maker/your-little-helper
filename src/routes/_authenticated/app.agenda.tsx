@@ -1088,6 +1088,9 @@ function Agenda() {
                 treatmentId = (t as any).id;
               }
               await create({ data: { ...payload, client_id: clientId, treatment_id: treatmentId } });
+              const ns = new Date(payload.starts_at);
+              const ne = new Date(payload.ends_at);
+              syncHoursWithAppointment(ns, ns.getHours() * 60 + ns.getMinutes(), ne.getHours() * 60 + ne.getMinutes());
               qc.invalidateQueries({ queryKey: ["appts"] });
               qc.invalidateQueries({ queryKey: ["treatments"] });
               qc.invalidateQueries({ queryKey: ["receivables"] });
