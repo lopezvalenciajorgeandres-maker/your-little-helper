@@ -6,7 +6,7 @@ import { listClients, createClient } from "@/lib/clients.functions";
 import { listServices } from "@/lib/services.functions";
 import { completeAppointmentSession, createAppointment, deleteAppointment, listAppointments, updateAppointment } from "@/lib/appointments.functions";
 import { Check, CheckCircle2, ChevronLeft, ChevronRight, Clock, Copy, Link2, Lock, LockOpen, MessageCircle, Plus, Trash2, X } from "lucide-react";
-import { createBlock, deleteBlock, listHours, saveHours } from "@/lib/schedule.functions";
+import { createBlock, deleteBlock, listHours, openSlot, saveHours } from "@/lib/schedule.functions";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ClientForm, type ClientPayload } from "@/components/app/client-form";
@@ -546,6 +546,16 @@ function Agenda() {
     blockMut.mutate({ starts_at: s.toISOString(), ends_at: e.toISOString(), kind: "franja", reason: "Horario no disponible" });
   }
 
+  // Abre solo una franja puntual (aunque el día o la fila completa estén bloqueados).
+  function confirmSlotUnlock() {
+    if (!confirmUnlockSlot) return;
+    const { s, e } = slotRange(confirmUnlockSlot.d, confirmUnlockSlot.m);
+    openSlotMut.mutate(
+      { starts_at: s.toISOString(), ends_at: e.toISOString() },
+      { onSettled: () => setConfirmUnlockSlot(null) },
+    );
+  }
+
   function confirmDayUnlock() {
     if (!confirmUnlockDay) return;
     const existing = dayBlocks(confirmUnlockDay);
@@ -886,11 +896,11 @@ function Agenda() {
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                             if (fullDayBlocked) {
-                               setConfirmUnlockDay(d);
-                               return;
-                             }
-                             toggleSlotBlock(d, m);
+                              if (blocked) {
+                                setConfirmUnlockSlot({ d, m });
+                                return;
+                              }
+                              toggleSlotBlock(d, m);
                           }}
                           className={`absolute right-0.5 top-0.5 z-10 rounded p-0.5 transition ${
                             blocked
