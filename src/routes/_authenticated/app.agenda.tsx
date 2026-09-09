@@ -541,8 +541,16 @@ function Agenda() {
     if (existing.length > 0) {
       unblockMut.mutate(existing.map((b) => b.id));
     }
+    // Si el día está marcado como cerrado en el horario del negocio, se abre.
+    const weekday = confirmUnlockDay.getDay();
+    if (weekHours[weekday]?.closed) {
+      hoursMut.mutate(
+        weekHours.map((h) => (h.weekday === weekday ? { ...h, closed: false } : h)),
+      );
+    }
     setConfirmUnlockDay(null);
   }
+
 
   function toggleDayBlock(d: Date) {
     const existing = dayBlocks(d);
