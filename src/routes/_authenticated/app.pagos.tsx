@@ -474,12 +474,17 @@ function PaymentModal({ clients, services, receivables, treatments, preselected,
             </select>
           </Field>
           <Field label="Estado">
-            <select className={inputClass} value={status} onChange={(e) => {
-              const next = e.target.value;
-              if (next === "Parcial" && !total) setTotal(amount);
-              setStatus(next);
-            }}>
-              {PAYMENT_STATUS.map((s) => <option key={s}>{s}</option>)}
+            <select
+              className={inputClass}
+              value={status}
+              onChange={(e) => {
+                const next = e.target.value;
+                if (next === "Parcial" && !total) setTotal(amount);
+                setStatus(next);
+              }}
+            >
+              <option value="Parcial">Parcial</option>
+              <option value="Pagado">Pago total</option>
             </select>
           </Field>
           {isPartial && (
