@@ -921,12 +921,12 @@ function Agenda() {
                               : `Nueva cita ${fmtSlot(m)}`
                         }
                          className={`w-full block transition border-b ${m % 60 === 0 ? "border-white/10" : "border-white/[0.04]"} ${
-                           blocked || dayClosed
-                             ? "bg-[repeating-linear-gradient(45deg,color-mix(in_srgb,var(--primary)_28%,transparent)_0_6px,transparent_6px_12px)] hover:bg-primary/25"
-                             : offHours
-                               ? "bg-[repeating-linear-gradient(45deg,rgba(255,255,255,0.05)_0_6px,transparent_6px_12px)] bg-black/30 hover:bg-white/[0.06]"
-                               : "hover:bg-white/[0.06]"
-                         }`}
+                            blocked || dayClosed
+                              ? "bg-lavender/20 hover:bg-lavender/30"
+                              : offHours
+                                ? "bg-[repeating-linear-gradient(45deg,rgba(255,255,255,0.05)_0_6px,transparent_6px_12px)] bg-black/30 hover:bg-white/[0.06]"
+                                : "hover:bg-white/[0.06]"
+                          }`}
                       />
 
                        {!taken && !dayClosed && (
