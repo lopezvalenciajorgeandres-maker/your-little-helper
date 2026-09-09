@@ -260,6 +260,8 @@ function Agenda() {
     onSuccess: (_r, v) => {
       qc.invalidateQueries({ queryKey: ["appts"] });
       const d = new Date(v.starts_at);
+      const e = new Date(v.ends_at);
+      syncHoursWithAppointment(d, d.getHours() * 60 + d.getMinutes(), e.getHours() * 60 + e.getMinutes());
       toast.success(
         `Cita reagendada: ${d.toLocaleDateString("es", { weekday: "long", day: "numeric", month: "short" })} ${d.toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" })}`,
       );
