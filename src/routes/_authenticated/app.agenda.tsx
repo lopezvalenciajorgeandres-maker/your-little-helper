@@ -605,16 +605,16 @@ function Agenda() {
   }
 
   function toggleRowBlock(minutes: number) {
-    const existing = days.flatMap((d) => {
-      const { s, e } = slotRange(d, minutes);
-      return blocksOverlapping(s, e);
-    });
-    if (existing.length > 0) {
-      unblockMut.mutate(Array.from(new Set(existing.map((b) => b.id))));
+    // Si la franja ya está bloqueada en todos los días (por bloqueo horizontal,
+    // por día completo o mixto), pedimos confirmación y abrimos SOLO esa franja.
+    if (isRowBlocked(minutes)) {
+      setConfirmUnlockRow(minutes);
       return;
     }
-    blockManyMut.mutate(
-      days.map((d) => {
+    // Bloquear: solo los días que aún no están bloqueados ni cerrados.
+    const rows = days
+      .filter((d) => !weekHours[d.getDay()]?.closed && !isSlotBlocked(d, minutes))
+      .map((d) => {
         const { s, e } = slotRange(d, minutes);
         return {
           starts_at: s.toISOString(),
@@ -622,8 +622,20 @@ function Agenda() {
           kind: "franja",
           reason: "Horario no disponible",
         };
-      }),
-    );
+      });
+    if (rows.length === 0) return;
+    blockManyMut.mutate(rows);
+  }
+
+  function confirmRowUnlock() {
+    if (confirmUnlockRow == null) return;
+    const rows = days
+      .filter((d) => isSlotBlocked(d, confirmUnlockRow))
+      .map((d) => {
+        const { s, e } = slotRange(d, confirmUnlockRow);
+        return { starts_at: s.toISOString(), ends_at: e.toISOString() };
+      });
+    openManySlotsMut.mutate(rows, { onSettled: () => setConfirmUnlockRow(null) });
   }
 
   const bookingSlug = tenant.business?.slug ?? null;
