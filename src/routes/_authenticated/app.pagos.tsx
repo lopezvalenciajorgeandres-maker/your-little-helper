@@ -491,11 +491,11 @@ function PaymentModal({ clients, services, receivables, treatments, preselected,
             <Field
               label="Saldo pendiente por pagar"
               hint={[
+                `Saldo actual: ${formatMoney(due, currency)}`,
                 alreadyPaid > 0 ? `Ya abonado antes: ${formatMoney(alreadyPaid, currency)}` : null,
-                abonoCents > 0 ? `Quedará: ${formatMoney(pendingAfter, currency)}` : null,
               ].filter(Boolean).join(" · ") || undefined}
             >
-              <input readOnly className={`${inputClass} bg-secondary`} value={formatMoney(due, currency)} />
+              <input readOnly className={`${inputClass} bg-secondary`} value={formatMoney(pendingAfter, currency)} />
             </Field>
           )}
 
