@@ -175,6 +175,14 @@ function Agenda() {
     [HOURS],
   );
 
+  const paidByAppt = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const r of receivables.data ?? []) {
+      if (r.appointment_id) map.set(r.appointment_id, r.paid_cents ?? 0);
+    }
+    return map;
+  }, [receivables.data]);
+
   const persistHours = useServerFn(saveHours);
   const hoursMut = useMutation({
     mutationFn: (hours: DayHours[]) =>
