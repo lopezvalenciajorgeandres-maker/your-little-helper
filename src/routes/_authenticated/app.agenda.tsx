@@ -815,7 +815,7 @@ function Agenda() {
                   onClick={() => toggleDayBlock(d)}
                   className={`mt-1.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium transition ${
                     dayBlocked
-                      ? "bg-rose-500 text-white hover:bg-rose-600"
+                      ? "bg-primary text-primary-foreground hover:bg-primary/80"
                       : "border border-white/15 text-neutral-300 hover:bg-white/10"
                   }`}
                   title={
