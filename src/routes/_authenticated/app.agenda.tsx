@@ -6,7 +6,7 @@ import { listClients, createClient } from "@/lib/clients.functions";
 import { listServices } from "@/lib/services.functions";
 import { completeAppointmentSession, createAppointment, deleteAppointment, listAppointments, updateAppointment } from "@/lib/appointments.functions";
 import { Check, CheckCircle2, ChevronLeft, ChevronRight, Clock, Copy, Link2, Lock, LockOpen, MessageCircle, Plus, Trash2, X } from "lucide-react";
-import { createBlock, deleteBlock, listHours } from "@/lib/schedule.functions";
+import { createBlock, deleteBlock, listHours, saveHours } from "@/lib/schedule.functions";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ClientForm, type ClientPayload } from "@/components/app/client-form";
@@ -38,15 +38,34 @@ export const Route = createFileRoute("/_authenticated/app/agenda")({
 });
 
 const DAY_NAMES = ["lun", "mar", "mié", "jue", "vie", "sáb", "dom"];
-const HOURS = Array.from({ length: 16 }, (_, i) => i + 6); // 06..21
 const SLOT_MIN = 15; // franjas de 15 minutos
 const SLOT_PX = 22; // px por franja de 15 min
 const SLOT_HEIGHT = SLOT_PX * (60 / SLOT_MIN); // px por hora
-const SLOTS = Array.from(
-  { length: HOURS.length * (60 / SLOT_MIN) },
-  (_, i) => HOURS[0] * 60 + i * SLOT_MIN,
-); // 360, 375, ...
 const fmtSlot = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+
+type DayHours = {
+  weekday: number;
+  open_time: string;
+  close_time: string;
+  break_start: string | null;
+  break_end: string | null;
+  closed: boolean;
+};
+
+const DEFAULT_DAY: Omit<DayHours, "weekday"> = {
+  open_time: "09:00",
+  close_time: "18:00",
+  break_start: null,
+  break_end: null,
+  closed: false,
+};
+
+const toMin = (t: string) => {
+  const [h, m] = t.split(":").map(Number);
+  return (h || 0) * 60 + (m || 0);
+};
+const toTime = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+
 
 function startOfWeek(d: Date) {
   const x = new Date(d);
@@ -122,6 +141,73 @@ function Agenda() {
     kind: string;
   }>;
 
+  // Horario del negocio (tabla de Ajustes / registro) → define la agenda
+  const weekHours = useMemo<DayHours[]>(() => {
+    const rows = (schedule.data?.hours ?? []) as DayHours[];
+    return Array.from({ length: 7 }, (_, weekday) => {
+      const found = rows.find((h) => h.weekday === weekday);
+      return found ? { ...found, weekday } : { weekday, ...DEFAULT_DAY };
+    });
+  }, [schedule.data]);
+
+  const hoursForWeekday = (weekday: number) => weekHours[weekday];
+
+  const HOURS = useMemo(() => {
+    const open = weekHours.filter((h) => !h.closed);
+    const min = open.length ? Math.min(...open.map((h) => toMin(h.open_time))) : 9 * 60;
+    const max = open.length ? Math.max(...open.map((h) => toMin(h.close_time))) : 18 * 60;
+    const startHour = Math.max(0, Math.floor(min / 60));
+    const endHour = Math.min(24, Math.ceil(max / 60));
+    const length = Math.max(1, endHour - startHour);
+    return Array.from({ length }, (_, i) => startHour + i);
+  }, [weekHours]);
+
+  const SLOTS = useMemo(
+    () => Array.from({ length: HOURS.length * (60 / SLOT_MIN) }, (_, i) => HOURS[0] * 60 + i * SLOT_MIN),
+    [HOURS],
+  );
+
+  const persistHours = useServerFn(saveHours);
+  const hoursMut = useMutation({
+    mutationFn: (hours: DayHours[]) =>
+      persistHours({
+        data: {
+          hours: hours.map((h) => ({
+            weekday: h.weekday,
+            open_time: h.open_time,
+            close_time: h.close_time,
+            break_start: h.break_start,
+            break_end: h.break_end,
+            closed: h.closed,
+          })),
+        },
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["schedule"] }),
+    onError: (e: any) => toast.error(e?.message ?? "No se pudo actualizar el horario"),
+  });
+
+  // Si una cita queda fuera del horario del día, se amplía el horario guardado.
+  function syncHoursWithAppointment(date: Date, startMin: number, endMin: number) {
+    const weekday = date.getDay();
+    const current = weekHours[weekday];
+    const open = current.closed ? startMin : Math.min(toMin(current.open_time), startMin);
+    const close = current.closed ? endMin : Math.max(toMin(current.close_time), endMin);
+    if (!current.closed && open === toMin(current.open_time) && close === toMin(current.close_time)) return;
+    const next = weekHours.map((h) =>
+      h.weekday === weekday
+        ? { ...h, closed: false, open_time: toTime(Math.max(0, open)), close_time: toTime(Math.min(24 * 60 - 1, close)) }
+        : h,
+    );
+    hoursMut.mutate(next, {
+      onSuccess: () =>
+        toast.success(
+          `Horario del ${date.toLocaleDateString("es", { weekday: "long" })} actualizado: ${toTime(open)} – ${toTime(close)}`,
+        ),
+    });
+  }
+
+
+
   const blockMut = useMutation({
     mutationFn: (v: { starts_at: string; ends_at: string; reason?: string | null; kind?: string }) =>
       addBlock({ data: { kind: "bloqueo", ...v } }),
@@ -174,6 +260,8 @@ function Agenda() {
     onSuccess: (_r, v) => {
       qc.invalidateQueries({ queryKey: ["appts"] });
       const d = new Date(v.starts_at);
+      const e = new Date(v.ends_at);
+      syncHoursWithAppointment(d, d.getHours() * 60 + d.getMinutes(), e.getHours() * 60 + e.getMinutes());
       toast.success(
         `Cita reagendada: ${d.toLocaleDateString("es", { weekday: "long", day: "numeric", month: "short" })} ${d.toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" })}`,
       );
@@ -646,6 +734,11 @@ function Agenda() {
               <div key={di} className="relative border-r border-white/5 last:border-r-0">
                 {SLOTS.map((m) => {
                   const blocked = isSlotBlocked(d, m);
+                  const dh = hoursForWeekday(d.getDay());
+                  const inBreak =
+                    !!dh.break_start && !!dh.break_end && m >= toMin(dh.break_start) && m < toMin(dh.break_end);
+                  const offHours =
+                    dh.closed || m < toMin(dh.open_time) || m >= toMin(dh.close_time) || inBreak;
                   const taken = dayAppts.some((a) => {
                     const s = new Date(a.starts_at);
                     const e = new Date(a.ends_at);
@@ -658,13 +751,17 @@ function Agenda() {
                       <button
                         onClick={() => (blocked ? toggleSlotBlock(d, m) : openNewAt(d, m))}
                         style={{ height: SLOT_PX }}
+                        title={offHours ? "Fuera del horario del negocio — al agendar aquí se amplía el horario" : undefined}
                         aria-label={blocked ? `Liberar franja ${fmtSlot(m)}` : `Nueva cita ${fmtSlot(m)}`}
                         className={`w-full block transition border-b ${m % 60 === 0 ? "border-white/10" : "border-white/[0.04]"} ${
                           blocked
                             ? "bg-[repeating-linear-gradient(45deg,rgba(244,63,94,0.35)_0_6px,transparent_6px_12px)] hover:bg-rose-500/30"
-                            : "hover:bg-white/[0.06]"
+                            : offHours
+                              ? "bg-black/25 hover:bg-white/[0.06]"
+                              : "hover:bg-white/[0.06]"
                         }`}
                       />
+
                       {!taken && (
                         <button
                           type="button"
@@ -991,6 +1088,9 @@ function Agenda() {
                 treatmentId = (t as any).id;
               }
               await create({ data: { ...payload, client_id: clientId, treatment_id: treatmentId } });
+              const ns = new Date(payload.starts_at);
+              const ne = new Date(payload.ends_at);
+              syncHoursWithAppointment(ns, ns.getHours() * 60 + ns.getMinutes(), ne.getHours() * 60 + ne.getMinutes());
               qc.invalidateQueries({ queryKey: ["appts"] });
               qc.invalidateQueries({ queryKey: ["treatments"] });
               qc.invalidateQueries({ queryKey: ["receivables"] });
