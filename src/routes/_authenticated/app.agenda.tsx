@@ -535,10 +535,19 @@ function Agenda() {
     blockMut.mutate({ starts_at: s.toISOString(), ends_at: e.toISOString(), kind: "franja", reason: "Horario no disponible" });
   }
 
+  function confirmDayUnlock() {
+    if (!confirmUnlockDay) return;
+    const existing = dayBlocks(confirmUnlockDay);
+    if (existing.length > 0) {
+      unblockMut.mutate(existing.map((b) => b.id));
+    }
+    setConfirmUnlockDay(null);
+  }
+
   function toggleDayBlock(d: Date) {
     const existing = dayBlocks(d);
     if (existing.length > 0) {
-      unblockMut.mutate(existing.map((b) => b.id));
+      setConfirmUnlockDay(d);
       return;
     }
     const s = new Date(d);
