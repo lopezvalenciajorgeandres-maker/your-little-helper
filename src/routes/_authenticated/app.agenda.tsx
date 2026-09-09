@@ -227,6 +227,16 @@ function Agenda() {
     onError: (e: any) => toast.error(e?.message ?? "No se pudo liberar el bloqueo"),
   });
 
+  const blockManyMut = useMutation({
+    mutationFn: (rows: { starts_at: string; ends_at: string; reason?: string | null; kind?: string }[]) =>
+      Promise.all(rows.map((v) => addBlock({ data: { kind: "bloqueo", ...v } }))),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["schedule"] });
+      toast.success("Franja horaria bloqueada en toda la semana");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "No se pudo bloquear la franja"),
+  });
+
 
   const pendingOnline = useMemo(
     () =>
