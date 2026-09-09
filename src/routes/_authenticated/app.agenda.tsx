@@ -932,13 +932,14 @@ function Agenda() {
                     <div key={m} style={{ height: SLOT_PX }} className="relative group/slot">
                       <button
                          onClick={() => {
-                           if (dayClosed || fullDayBlocked || blocked) return;
-                           if (offHours) {
-                             setConfirmOffHours({ d, m });
-                             return;
-                           }
-                           openNewAt(d, m);
-                         }}
+                            if (fullDayBlocked || blocked) return;
+                            if (offHours) {
+                              // Incluye días cerrados: permite abrir solo esta hora con confirmación.
+                              setConfirmOffHours({ d, m });
+                              return;
+                            }
+                            openNewAt(d, m);
+                          }}
                         style={{ height: SLOT_PX }}
                         title={
                           dayClosed
