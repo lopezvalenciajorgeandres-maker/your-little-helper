@@ -602,7 +602,9 @@ function Agenda() {
 
   // Bloqueo horizontal: misma franja horaria en todos los días de la semana visible
   function isRowBlocked(minutes: number) {
-    return days.every((d) => isSlotBlocked(d, minutes));
+    // Un día cerrado según el horario cuenta como bloqueado para la fila,
+    // así el candado lateral refleja el estado real aunque haya días cerrados.
+    return days.every((d) => isSlotBlocked(d, minutes) || !!weekHours[d.getDay()]?.closed);
   }
 
   function toggleRowBlock(minutes: number) {
@@ -920,13 +922,13 @@ function Agenda() {
                                ? `Franja bloqueada ${fmtSlot(m)}`
                               : `Nueva cita ${fmtSlot(m)}`
                         }
-                        className={`w-full block transition border-b ${m % 60 === 0 ? "border-white/10" : "border-white/[0.04]"} ${
-                          blocked || dayClosed
-                            ? "bg-[repeating-linear-gradient(45deg,rgba(244,63,94,0.35)_0_6px,transparent_6px_12px)] hover:bg-rose-500/30"
-                            : offHours
-                              ? "bg-black/25 hover:bg-white/[0.06]"
-                              : "hover:bg-white/[0.06]"
-                        }`}
+                         className={`w-full block transition border-b ${m % 60 === 0 ? "border-white/10" : "border-white/[0.04]"} ${
+                           blocked || dayClosed
+                             ? "bg-[repeating-linear-gradient(45deg,color-mix(in_srgb,var(--primary)_28%,transparent)_0_6px,transparent_6px_12px)] hover:bg-primary/25"
+                             : offHours
+                               ? "bg-black/25 hover:bg-white/[0.06]"
+                               : "hover:bg-white/[0.06]"
+                         }`}
                       />
 
                        {!taken && !dayClosed && (
