@@ -1837,7 +1837,17 @@ function EditTimeModal({
   );
 }
 
+/** Ámbar cálido (sin pagar) → verde cálido (pagado) según el avance de los abonos. */
+function payProgressColor(ratio: number) {
+  const t = Math.max(0, Math.min(1, ratio));
+  const from = [232, 163, 61];
+  const to = [104, 190, 132];
+  const mix = from.map((c, i) => Math.round(c + (to[i]! - c) * t));
+  return `#${mix.map((c) => c.toString(16).padStart(2, "0")).join("")}`;
+}
+
 function readableText(hex: string) {
+
   const h = hex.replace("#", "");
   if (h.length !== 6) return "#1a1512";
   const r = parseInt(h.slice(0, 2), 16);
