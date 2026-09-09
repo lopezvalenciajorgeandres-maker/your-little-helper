@@ -602,7 +602,9 @@ function Agenda() {
 
   // Bloqueo horizontal: misma franja horaria en todos los días de la semana visible
   function isRowBlocked(minutes: number) {
-    return days.every((d) => isSlotBlocked(d, minutes));
+    // Un día cerrado según el horario cuenta como bloqueado para la fila,
+    // así el candado lateral refleja el estado real aunque haya días cerrados.
+    return days.every((d) => isSlotBlocked(d, minutes) || !!weekHours[d.getDay()]?.closed);
   }
 
   function toggleRowBlock(minutes: number) {
@@ -813,7 +815,7 @@ function Agenda() {
                   onClick={() => toggleDayBlock(d)}
                   className={`mt-1.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium transition ${
                     dayBlocked
-                      ? "bg-rose-500 text-white hover:bg-rose-600"
+                      ? "bg-primary text-primary-foreground hover:bg-primary/80"
                       : "border border-white/15 text-neutral-300 hover:bg-white/10"
                   }`}
                   title={
@@ -844,7 +846,7 @@ function Agenda() {
                   key={m}
                   style={{ height: SLOT_PX }}
                   className={`group/row relative flex items-center justify-end gap-1 pr-2 border-b border-white/5 text-[10px] ${
-                    rowBlocked ? "bg-rose-500/15" : ""
+                    rowBlocked ? "bg-primary/15" : ""
                   } ${m % 60 === 0 ? "text-neutral-300 font-medium" : "text-neutral-500"}`}
                 >
                   <button
@@ -852,14 +854,14 @@ function Agenda() {
                     onClick={() => toggleRowBlock(m)}
                     title={
                       rowBlocked
-                        ? `Liberar ${fmtSlot(m)} en toda la semana`
-                        : `Bloquear ${fmtSlot(m)} en todos los días de la semana`
+                        ? `Abrir ${fmtSlot(m)} en toda la semana (pide confirmación)`
+                        : `Cerrar ${fmtSlot(m)} en todos los días de la semana (pide confirmación)`
                     }
-                    aria-label={rowBlocked ? `Liberar franja ${fmtSlot(m)} de la semana` : `Bloquear franja ${fmtSlot(m)} de la semana`}
+                    aria-label={rowBlocked ? `Abrir franja ${fmtSlot(m)} de la semana` : `Cerrar franja ${fmtSlot(m)} de la semana`}
                     className={`shrink-0 rounded p-0.5 transition ${
                       rowBlocked
-                        ? "text-rose-400 hover:text-rose-300"
-                        : "text-neutral-500 hover:text-rose-400"
+                        ? "text-primary hover:text-primary/80"
+                        : "text-neutral-500 hover:text-primary"
                     }`}
                   >
                     {rowBlocked ? <Lock className="h-3 w-3" /> : <LockOpen className="h-3 w-3" />}
@@ -920,13 +922,13 @@ function Agenda() {
                                ? `Franja bloqueada ${fmtSlot(m)}`
                               : `Nueva cita ${fmtSlot(m)}`
                         }
-                        className={`w-full block transition border-b ${m % 60 === 0 ? "border-white/10" : "border-white/[0.04]"} ${
-                          blocked || dayClosed
-                            ? "bg-[repeating-linear-gradient(45deg,rgba(244,63,94,0.35)_0_6px,transparent_6px_12px)] hover:bg-rose-500/30"
-                            : offHours
-                              ? "bg-black/25 hover:bg-white/[0.06]"
-                              : "hover:bg-white/[0.06]"
-                        }`}
+                         className={`w-full block transition border-b ${m % 60 === 0 ? "border-white/10" : "border-white/[0.04]"} ${
+                           blocked || dayClosed
+                             ? "bg-[repeating-linear-gradient(45deg,color-mix(in_srgb,var(--primary)_28%,transparent)_0_6px,transparent_6px_12px)] hover:bg-primary/25"
+                             : offHours
+                               ? "bg-black/25 hover:bg-white/[0.06]"
+                               : "hover:bg-white/[0.06]"
+                         }`}
                       />
 
                        {!taken && !dayClosed && (
@@ -942,8 +944,8 @@ function Agenda() {
                           }}
                           className={`absolute right-0.5 top-0.5 z-10 rounded p-0.5 transition ${
                             blocked
-                              ? "bg-rose-500 text-white opacity-100"
-                              : "bg-white/15 text-neutral-100 opacity-0 group-hover/slot:opacity-100"
+                               ? "bg-primary text-primary-foreground opacity-100"
+                               : "bg-white/15 text-neutral-100 opacity-0 group-hover/slot:opacity-100"
                           }`}
                            aria-label={blocked ? `Abrir solo la franja ${fmtSlot(m)}` : `Bloquear franja ${fmtSlot(m)}`}
                            title={blocked ? "Abrir solo esta hora (pide confirmación)" : "Bloquear esta franja"}
@@ -1301,7 +1303,7 @@ function Agenda() {
       {confirmUnlockSlot && (
         <Modal title="Abrir esta hora" onClose={() => setConfirmUnlockSlot(null)}>
           <div className="text-center">
-            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-rose-500/15 text-rose-500">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/15 text-primary">
               <LockOpen className="h-7 w-7" />
             </div>
             <p className="text-base text-foreground">
@@ -1342,7 +1344,7 @@ function Agenda() {
       {confirmLockRow != null && (
         <Modal title="Cerrar esta franja en la semana" onClose={() => setConfirmLockRow(null)}>
           <div className="text-center">
-            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-rose-500/15 text-rose-500">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/15 text-primary">
               <Lock className="h-7 w-7" />
             </div>
             <p className="text-base text-foreground">
@@ -1374,7 +1376,7 @@ function Agenda() {
       {confirmUnlockRow != null && (
         <Modal title="Abrir esta franja en la semana" onClose={() => setConfirmUnlockRow(null)}>
           <div className="text-center">
-            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-rose-500/15 text-rose-500">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/15 text-primary">
               <LockOpen className="h-7 w-7" />
             </div>
             <p className="text-base text-foreground">
@@ -1408,7 +1410,7 @@ function Agenda() {
           onClose={() => setConfirmUnlockDay(null)}
         >
           <div className="text-center">
-            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-rose-500/15 text-rose-500">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/15 text-primary">
               <LockOpen className="h-7 w-7" />
             </div>
             <p className="text-base text-foreground">
