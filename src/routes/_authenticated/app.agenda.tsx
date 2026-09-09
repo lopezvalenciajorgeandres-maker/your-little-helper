@@ -933,6 +933,10 @@ function Agenda() {
                       <button
                          onClick={() => {
                            if (dayClosed || fullDayBlocked || blocked) return;
+                           if (offHours) {
+                             setConfirmOffHours({ d, m });
+                             return;
+                           }
                            openNewAt(d, m);
                          }}
                         style={{ height: SLOT_PX }}
@@ -944,7 +948,7 @@ function Agenda() {
                                : blocked
                                  ? "Franja bloqueada — usa el candado para liberarla"
                             : offHours
-                              ? "Fuera del horario del negocio — al agendar aquí se amplía el horario"
+                              ? "Fuera del horario del negocio — usa el candado para abrir esta hora"
                               : undefined
                         }
                         aria-label={
@@ -954,14 +958,14 @@ function Agenda() {
                                ? `Día bloqueado ${DAY_NAMES[di]}`
                             : blocked
                                ? `Franja bloqueada ${fmtSlot(m)}`
+                              : offHours
+                                ? `Fuera de horario ${fmtSlot(m)}`
                               : `Nueva cita ${fmtSlot(m)}`
                         }
                          className={`w-full block transition border-b ${m % 60 === 0 ? "border-white/10" : "border-white/[0.04]"} ${
-                            blocked || dayClosed
+                            blocked || dayClosed || offHours
                               ? "bg-lavender/20 hover:bg-lavender/30"
-                              : offHours
-                                ? "bg-[repeating-linear-gradient(45deg,rgba(255,255,255,0.05)_0_6px,transparent_6px_12px)] bg-black/30 hover:bg-white/[0.06]"
-                                : "hover:bg-white/[0.06]"
+                              : "hover:bg-white/[0.06]"
                           }`}
                       />
 
@@ -974,17 +978,21 @@ function Agenda() {
                                 setConfirmUnlockSlot({ d, m });
                                 return;
                               }
+                              if (offHours) {
+                                setConfirmOffHours({ d, m });
+                                return;
+                              }
                               toggleSlotBlock(d, m);
                           }}
                           className={`absolute right-0.5 top-0.5 z-10 rounded p-0.5 transition ${
-                            blocked
+                            blocked || offHours
                                ? "bg-lavender text-ink opacity-100"
                                : "bg-white/15 text-neutral-100 opacity-0 group-hover/slot:opacity-100"
                           }`}
-                           aria-label={blocked ? `Abrir solo la franja ${fmtSlot(m)}` : `Bloquear franja ${fmtSlot(m)}`}
-                           title={blocked ? "Abrir solo esta hora (pide confirmación)" : "Bloquear esta franja"}
+                           aria-label={blocked || offHours ? `Abrir solo la franja ${fmtSlot(m)}` : `Bloquear franja ${fmtSlot(m)}`}
+                           title={blocked || offHours ? "Abrir solo esta hora (pide confirmación)" : "Bloquear esta franja"}
                         >
-                          {blocked ? <LockOpen className="h-2.5 w-2.5" /> : <Lock className="h-2.5 w-2.5" />}
+                          {blocked || offHours ? <Lock className="h-2.5 w-2.5" /> : <Lock className="h-2.5 w-2.5" />}
                         </button>
                       )}
                     </div>
