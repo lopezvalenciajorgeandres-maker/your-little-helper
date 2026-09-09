@@ -6,7 +6,7 @@ import { listClients, createClient } from "@/lib/clients.functions";
 import { listServices } from "@/lib/services.functions";
 import { completeAppointmentSession, createAppointment, deleteAppointment, listAppointments, updateAppointment } from "@/lib/appointments.functions";
 import { Check, CheckCircle2, ChevronLeft, ChevronRight, Clock, Copy, Link2, Lock, LockOpen, MessageCircle, Plus, Trash2, X } from "lucide-react";
-import { createBlock, deleteBlock, listHours } from "@/lib/schedule.functions";
+import { createBlock, deleteBlock, listHours, saveHours } from "@/lib/schedule.functions";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ClientForm, type ClientPayload } from "@/components/app/client-form";
