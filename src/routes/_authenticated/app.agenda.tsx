@@ -81,6 +81,7 @@ function Agenda() {
   const [modal, setModal] = useState(false);
   const [reminder, setReminder] = useState<WhatsAppReminder | null>(null);
   const [editAppt, setEditAppt] = useState<any | null>(null);
+  const [confirmUnlockDay, setConfirmUnlockDay] = useState<Date | null>(null);
   const [drag, setDrag] = useState<{
     id: string;
     grabDy: number;
@@ -534,10 +535,19 @@ function Agenda() {
     blockMut.mutate({ starts_at: s.toISOString(), ends_at: e.toISOString(), kind: "franja", reason: "Horario no disponible" });
   }
 
+  function confirmDayUnlock() {
+    if (!confirmUnlockDay) return;
+    const existing = dayBlocks(confirmUnlockDay);
+    if (existing.length > 0) {
+      unblockMut.mutate(existing.map((b) => b.id));
+    }
+    setConfirmUnlockDay(null);
+  }
+
   function toggleDayBlock(d: Date) {
     const existing = dayBlocks(d);
     if (existing.length > 0) {
-      unblockMut.mutate(existing.map((b) => b.id));
+      setConfirmUnlockDay(d);
       return;
     }
     const s = new Date(d);
@@ -738,7 +748,7 @@ function Agenda() {
                       ? "bg-rose-500 text-white hover:bg-rose-600"
                       : "border border-white/15 text-neutral-300 hover:bg-white/10"
                   }`}
-                  title={dayBlocked ? "Día bloqueado — toca para liberar" : "Bloquear día completo"}
+                  title={dayBlocked ? "Día bloqueado — toca para confirmar apertura" : "Bloquear día completo"}
                 >
                   {dayBlocked ? <LockOpen className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
                   {dayBlocked ? "Liberar día" : "Bloquear día"}
@@ -1185,6 +1195,48 @@ function Agenda() {
           onCloseTreatment={(v) => closeTreatMut.mutate(v)}
           closingTreatment={closeTreatMut.isPending}
         />
+      )}
+
+      {confirmUnlockDay && (
+        <Modal
+          title="Abrir día bloqueado"
+          onClose={() => setConfirmUnlockDay(null)}
+        >
+          <div className="text-center">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-rose-500/15 text-rose-500">
+              <LockOpen className="h-7 w-7" />
+            </div>
+            <p className="text-base text-foreground">
+              ¿Quieres abrir el{" "}
+              <span className="font-semibold">
+                {confirmUnlockDay.toLocaleDateString("es", { weekday: "long", day: "numeric", month: "long" })}
+              </span>
+              ?
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Al confirmar, el día volverá a estar disponible en tu agenda y en el enlace de reservas.
+            </p>
+            <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-center">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setConfirmUnlockDay(null)}
+                className="w-full sm:w-auto"
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={confirmDayUnlock}
+                disabled={unblockMut.isPending}
+                className="w-full sm:w-auto"
+              >
+                {unblockMut.isPending ? "Abriendo…" : "Sí, abrir día"}
+              </Button>
+            </div>
+          </div>
+        </Modal>
       )}
     </div>
   );
