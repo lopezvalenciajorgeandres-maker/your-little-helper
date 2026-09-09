@@ -227,6 +227,16 @@ function Agenda() {
     onError: (e: any) => toast.error(e?.message ?? "No se pudo liberar el bloqueo"),
   });
 
+  const blockManyMut = useMutation({
+    mutationFn: (rows: { starts_at: string; ends_at: string; reason?: string | null; kind?: string }[]) =>
+      Promise.all(rows.map((v) => addBlock({ data: { kind: "bloqueo", ...v } }))),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["schedule"] });
+      toast.success("Franja horaria bloqueada en toda la semana");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "No se pudo bloquear la franja"),
+  });
+
 
   const pendingOnline = useMemo(
     () =>
@@ -537,6 +547,33 @@ function Agenda() {
     blockMut.mutate({ starts_at: s.toISOString(), ends_at: e.toISOString(), kind: "dia", reason: "Día no disponible" });
   }
 
+  // Bloqueo horizontal: misma franja horaria en todos los días de la semana visible
+  function isRowBlocked(minutes: number) {
+    return days.every((d) => isSlotBlocked(d, minutes));
+  }
+
+  function toggleRowBlock(minutes: number) {
+    const existing = days.flatMap((d) => {
+      const { s, e } = slotRange(d, minutes);
+      return blocksOverlapping(s, e);
+    });
+    if (existing.length > 0) {
+      unblockMut.mutate(Array.from(new Set(existing.map((b) => b.id))));
+      return;
+    }
+    blockManyMut.mutate(
+      days.map((d) => {
+        const { s, e } = slotRange(d, minutes);
+        return {
+          starts_at: s.toISOString(),
+          ends_at: e.toISOString(),
+          kind: "franja",
+          reason: "Horario no disponible",
+        };
+      }),
+    );
+  }
+
   const bookingSlug = tenant.business?.slug ?? null;
   const bookingUrl =
     typeof window !== "undefined" && bookingSlug ? `${window.location.origin}/booking/${bookingSlug}` : "";
@@ -716,16 +753,39 @@ function Agenda() {
         <div ref={gridRef} className="relative grid" style={{ gridTemplateColumns: `72px repeat(7, minmax(0,1fr))` }}>
           {/* Franjas de 15 minutos */}
           <div className="border-r border-white/5">
-            {SLOTS.map((m) => (
-              <div
-                key={m}
-                style={{ height: SLOT_PX }}
-                className={`text-[10px] text-right pr-2 leading-[22px] border-b border-white/5 ${m % 60 === 0 ? "text-neutral-300 font-medium" : "text-neutral-500"}`}
-              >
-                {fmtSlot(m)}
-              </div>
-            ))}
+            {SLOTS.map((m) => {
+              const rowBlocked = isRowBlocked(m);
+              return (
+                <div
+                  key={m}
+                  style={{ height: SLOT_PX }}
+                  className={`group/row relative flex items-center justify-end gap-1 pr-2 border-b border-white/5 text-[10px] ${
+                    rowBlocked ? "bg-rose-500/15" : ""
+                  } ${m % 60 === 0 ? "text-neutral-300 font-medium" : "text-neutral-500"}`}
+                >
+                  <button
+                    type="button"
+                    onClick={() => toggleRowBlock(m)}
+                    title={
+                      rowBlocked
+                        ? `Liberar ${fmtSlot(m)} en toda la semana`
+                        : `Bloquear ${fmtSlot(m)} en todos los días de la semana`
+                    }
+                    aria-label={rowBlocked ? `Liberar franja ${fmtSlot(m)} de la semana` : `Bloquear franja ${fmtSlot(m)} de la semana`}
+                    className={`shrink-0 rounded p-0.5 transition ${
+                      rowBlocked
+                        ? "text-rose-400 hover:text-rose-300"
+                        : "text-neutral-500 opacity-0 group-hover/row:opacity-100 hover:text-rose-400"
+                    }`}
+                  >
+                    {rowBlocked ? <LockOpen className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
+                  </button>
+                  <span className="tabular-nums">{fmtSlot(m)}</span>
+                </div>
+              );
+            })}
           </div>
+
 
           {/* Day columns */}
           {days.map((d, di) => {
