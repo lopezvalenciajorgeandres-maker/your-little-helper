@@ -831,15 +831,34 @@ function Agenda() {
                     const em = e.getHours() * 60 + e.getMinutes();
                     return m < em && m + SLOT_MIN > sm;
                   });
+                  const dayClosed = !!dh.closed;
                   return (
                     <div key={m} style={{ height: SLOT_PX }} className="relative group/slot">
                       <button
-                        onClick={() => (blocked ? toggleSlotBlock(d, m) : openNewAt(d, m))}
+                        onClick={() =>
+                          dayClosed
+                            ? setConfirmUnlockDay(d)
+                            : blocked
+                              ? toggleSlotBlock(d, m)
+                              : openNewAt(d, m)
+                        }
                         style={{ height: SLOT_PX }}
-                        title={offHours ? "Fuera del horario del negocio — al agendar aquí se amplía el horario" : undefined}
-                        aria-label={blocked ? `Liberar franja ${fmtSlot(m)}` : `Nueva cita ${fmtSlot(m)}`}
+                        title={
+                          dayClosed
+                            ? "Día cerrado según el horario del negocio — toca para abrirlo"
+                            : offHours
+                              ? "Fuera del horario del negocio — al agendar aquí se amplía el horario"
+                              : undefined
+                        }
+                        aria-label={
+                          dayClosed
+                            ? `Día cerrado — abrir ${DAY_NAMES[di]}`
+                            : blocked
+                              ? `Liberar franja ${fmtSlot(m)}`
+                              : `Nueva cita ${fmtSlot(m)}`
+                        }
                         className={`w-full block transition border-b ${m % 60 === 0 ? "border-white/10" : "border-white/[0.04]"} ${
-                          blocked
+                          blocked || dayClosed
                             ? "bg-[repeating-linear-gradient(45deg,rgba(244,63,94,0.35)_0_6px,transparent_6px_12px)] hover:bg-rose-500/30"
                             : offHours
                               ? "bg-black/25 hover:bg-white/[0.06]"
