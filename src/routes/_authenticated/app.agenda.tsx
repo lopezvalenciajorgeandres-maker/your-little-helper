@@ -748,7 +748,7 @@ function Agenda() {
                       ? "bg-rose-500 text-white hover:bg-rose-600"
                       : "border border-white/15 text-neutral-300 hover:bg-white/10"
                   }`}
-                  title={dayBlocked ? "Día bloqueado — toca para liberar" : "Bloquear día completo"}
+                  title={dayBlocked ? "Día bloqueado — toca para confirmar apertura" : "Bloquear día completo"}
                 >
                   {dayBlocked ? <LockOpen className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
                   {dayBlocked ? "Liberar día" : "Bloquear día"}
