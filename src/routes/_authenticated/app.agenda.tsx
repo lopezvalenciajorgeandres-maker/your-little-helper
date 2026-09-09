@@ -1339,6 +1339,38 @@ function Agenda() {
         </Modal>
       )}
 
+      {confirmLockRow != null && (
+        <Modal title="Cerrar esta franja en la semana" onClose={() => setConfirmLockRow(null)}>
+          <div className="text-center">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-rose-500/15 text-rose-500">
+              <Lock className="h-7 w-7" />
+            </div>
+            <p className="text-base text-foreground">
+              ¿Deseas cerrar las <span className="font-semibold">{fmtSlot(confirmLockRow)}</span> en todos los días de
+              esta semana?
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Ideal para separar el horario de desayuno, almuerzo u otras pausas. Los días cerrados o ya bloqueados se
+              respetan.
+            </p>
+            <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-center">
+              <Button type="button" variant="outline" onClick={() => setConfirmLockRow(null)} className="w-full sm:w-auto">
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={confirmRowLock}
+                disabled={blockManyMut.isPending}
+                className="w-full sm:w-auto"
+              >
+                {blockManyMut.isPending ? "Cerrando…" : "Sí, cerrar la franja"}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
       {confirmUnlockRow != null && (
         <Modal title="Abrir esta franja en la semana" onClose={() => setConfirmUnlockRow(null)}>
           <div className="text-center">
