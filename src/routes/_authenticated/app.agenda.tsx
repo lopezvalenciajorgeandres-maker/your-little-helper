@@ -815,19 +815,17 @@ function Agenda() {
                   onClick={() => toggleDayBlock(d)}
                   className={`mt-1.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium transition ${
                     dayBlocked
-                      ? "bg-primary text-primary-foreground hover:bg-primary/80"
+                      ? "bg-lavender text-ink hover:bg-lavender/80"
                       : "border border-white/15 text-neutral-300 hover:bg-white/10"
                   }`}
                   title={
-                    dayClosed
-                      ? "Cerrado según el horario del negocio — toca para abrirlo"
-                      : dayBlocked
-                        ? "Día bloqueado — toca para confirmar apertura"
-                        : "Bloquear día completo"
+                    dayBlocked
+                      ? "Día bloqueado — toca para confirmar apertura"
+                      : "Bloquear día completo"
                   }
                 >
                   {dayBlocked ? <LockOpen className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
-                  {dayClosed ? "Cerrado" : dayBlocked ? "Liberar día" : "Bloquear día"}
+                  {dayBlocked ? "Liberar día" : "Bloquear día"}
                 </button>
               </div>
             );
@@ -846,7 +844,7 @@ function Agenda() {
                   key={m}
                   style={{ height: SLOT_PX }}
                   className={`group/row relative flex items-center justify-end gap-1 pr-2 border-b border-white/5 text-[10px] ${
-                    rowBlocked ? "bg-primary/15" : ""
+                    rowBlocked ? "bg-lavender/15" : ""
                   } ${m % 60 === 0 ? "text-neutral-300 font-medium" : "text-neutral-500"}`}
                 >
                   <button
@@ -860,8 +858,8 @@ function Agenda() {
                     aria-label={rowBlocked ? `Abrir franja ${fmtSlot(m)} de la semana` : `Cerrar franja ${fmtSlot(m)} de la semana`}
                     className={`shrink-0 rounded p-0.5 transition ${
                       rowBlocked
-                        ? "text-primary hover:text-primary/80"
-                        : "text-neutral-500 hover:text-primary"
+                        ? "text-lavender hover:text-lavender/80"
+                        : "text-neutral-500 hover:text-lavender"
                     }`}
                   >
                     {rowBlocked ? <Lock className="h-3 w-3" /> : <LockOpen className="h-3 w-3" />}
@@ -923,12 +921,12 @@ function Agenda() {
                               : `Nueva cita ${fmtSlot(m)}`
                         }
                          className={`w-full block transition border-b ${m % 60 === 0 ? "border-white/10" : "border-white/[0.04]"} ${
-                           blocked || dayClosed
-                             ? "bg-[repeating-linear-gradient(45deg,color-mix(in_srgb,var(--primary)_28%,transparent)_0_6px,transparent_6px_12px)] hover:bg-primary/25"
-                             : offHours
-                               ? "bg-[repeating-linear-gradient(45deg,rgba(255,255,255,0.05)_0_6px,transparent_6px_12px)] bg-black/30 hover:bg-white/[0.06]"
-                               : "hover:bg-white/[0.06]"
-                         }`}
+                            blocked || dayClosed
+                              ? "bg-lavender/20 hover:bg-lavender/30"
+                              : offHours
+                                ? "bg-[repeating-linear-gradient(45deg,rgba(255,255,255,0.05)_0_6px,transparent_6px_12px)] bg-black/30 hover:bg-white/[0.06]"
+                                : "hover:bg-white/[0.06]"
+                          }`}
                       />
 
                        {!taken && !dayClosed && (
@@ -944,7 +942,7 @@ function Agenda() {
                           }}
                           className={`absolute right-0.5 top-0.5 z-10 rounded p-0.5 transition ${
                             blocked
-                               ? "bg-primary text-primary-foreground opacity-100"
+                               ? "bg-lavender text-ink opacity-100"
                                : "bg-white/15 text-neutral-100 opacity-0 group-hover/slot:opacity-100"
                           }`}
                            aria-label={blocked ? `Abrir solo la franja ${fmtSlot(m)}` : `Bloquear franja ${fmtSlot(m)}`}
