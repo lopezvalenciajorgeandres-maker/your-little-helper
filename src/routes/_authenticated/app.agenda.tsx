@@ -83,6 +83,7 @@ function Agenda() {
   const [editAppt, setEditAppt] = useState<any | null>(null);
   const [confirmUnlockDay, setConfirmUnlockDay] = useState<Date | null>(null);
   const [confirmUnlockSlot, setConfirmUnlockSlot] = useState<{ d: Date; m: number } | null>(null);
+  const [confirmOffHours, setConfirmOffHours] = useState<{ d: Date; m: number } | null>(null);
   const [confirmUnlockRow, setConfirmUnlockRow] = useState<number | null>(null);
   const [confirmLockRow, setConfirmLockRow] = useState<number | null>(null);
   const [drag, setDrag] = useState<{
@@ -209,6 +210,41 @@ function Agenda() {
         ),
     });
   }
+
+  // Amplía el horario del día para incluir una franja fuera de horario.
+  function confirmOffHoursOpen() {
+    if (!confirmOffHours) return;
+    const { d, m } = confirmOffHours;
+    const weekday = d.getDay();
+    const current = weekHours[weekday];
+    const startMin = m;
+    const endMin = m + SLOT_MIN;
+    const open = current.closed ? startMin : Math.min(toMin(current.open_time), startMin);
+    const close = current.closed ? endMin : Math.max(toMin(current.close_time), endMin);
+    const inBreak =
+      !!current.break_start &&
+      !!current.break_end &&
+      startMin >= toMin(current.break_start) &&
+      startMin < toMin(current.break_end);
+    const next = weekHours.map((h) =>
+      h.weekday === weekday
+        ? {
+            ...h,
+            closed: false,
+            open_time: toTime(Math.max(0, open)),
+            close_time: toTime(Math.min(24 * 60 - 1, close)),
+            break_start: inBreak ? null : h.break_start,
+            break_end: inBreak ? null : h.break_end,
+          }
+        : h,
+    );
+    hoursMut.mutate(next, {
+      onSuccess: () => toast.success("Horario ampliado para esa franja"),
+      onSettled: () => setConfirmOffHours(null),
+    });
+  }
+
+
 
 
 
@@ -897,6 +933,10 @@ function Agenda() {
                       <button
                          onClick={() => {
                            if (dayClosed || fullDayBlocked || blocked) return;
+                           if (offHours) {
+                             setConfirmOffHours({ d, m });
+                             return;
+                           }
                            openNewAt(d, m);
                          }}
                         style={{ height: SLOT_PX }}
@@ -908,7 +948,7 @@ function Agenda() {
                                : blocked
                                  ? "Franja bloqueada — usa el candado para liberarla"
                             : offHours
-                              ? "Fuera del horario del negocio — al agendar aquí se amplía el horario"
+                              ? "Fuera del horario del negocio — usa el candado para abrir esta hora"
                               : undefined
                         }
                         aria-label={
@@ -918,14 +958,14 @@ function Agenda() {
                                ? `Día bloqueado ${DAY_NAMES[di]}`
                             : blocked
                                ? `Franja bloqueada ${fmtSlot(m)}`
+                              : offHours
+                                ? `Fuera de horario ${fmtSlot(m)}`
                               : `Nueva cita ${fmtSlot(m)}`
                         }
                          className={`w-full block transition border-b ${m % 60 === 0 ? "border-white/10" : "border-white/[0.04]"} ${
-                            blocked || dayClosed
+                            blocked || dayClosed || offHours
                               ? "bg-lavender/20 hover:bg-lavender/30"
-                              : offHours
-                                ? "bg-[repeating-linear-gradient(45deg,rgba(255,255,255,0.05)_0_6px,transparent_6px_12px)] bg-black/30 hover:bg-white/[0.06]"
-                                : "hover:bg-white/[0.06]"
+                              : "hover:bg-white/[0.06]"
                           }`}
                       />
 
@@ -938,17 +978,21 @@ function Agenda() {
                                 setConfirmUnlockSlot({ d, m });
                                 return;
                               }
+                              if (offHours) {
+                                setConfirmOffHours({ d, m });
+                                return;
+                              }
                               toggleSlotBlock(d, m);
                           }}
                           className={`absolute right-0.5 top-0.5 z-10 rounded p-0.5 transition ${
-                            blocked
+                            blocked || offHours
                                ? "bg-lavender text-ink opacity-100"
                                : "bg-white/15 text-neutral-100 opacity-0 group-hover/slot:opacity-100"
                           }`}
-                           aria-label={blocked ? `Abrir solo la franja ${fmtSlot(m)}` : `Bloquear franja ${fmtSlot(m)}`}
-                           title={blocked ? "Abrir solo esta hora (pide confirmación)" : "Bloquear esta franja"}
+                           aria-label={blocked || offHours ? `Abrir solo la franja ${fmtSlot(m)}` : `Bloquear franja ${fmtSlot(m)}`}
+                           title={blocked || offHours ? "Abrir solo esta hora (pide confirmación)" : "Bloquear esta franja"}
                         >
-                          {blocked ? <LockOpen className="h-2.5 w-2.5" /> : <Lock className="h-2.5 w-2.5" />}
+                          {blocked || offHours ? <LockOpen className="h-2.5 w-2.5" /> : <Lock className="h-2.5 w-2.5" />}
                         </button>
                       )}
                     </div>
@@ -1296,6 +1340,40 @@ function Agenda() {
           onCloseTreatment={(v) => closeTreatMut.mutate(v)}
           closingTreatment={closeTreatMut.isPending}
         />
+      )}
+
+      {confirmOffHours && (
+        <Modal title="Abrir esta hora" onClose={() => setConfirmOffHours(null)}>
+          <div className="text-center">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-lavender/25 text-lavender">
+              <LockOpen className="h-7 w-7" />
+            </div>
+            <p className="text-base text-foreground">
+              ¿Deseas abrir las <span className="font-semibold">{fmtSlot(confirmOffHours.m)}</span> del{" "}
+              <span className="font-semibold">
+                {confirmOffHours.d.toLocaleDateString("es", { weekday: "long", day: "numeric", month: "long" })}
+              </span>
+              ?
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Esa hora está fuera del horario de tu negocio. Al abrirla se amplía el horario de ese día en la tabla de
+              horarios y quedará disponible para reservas.
+            </p>
+            <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-center">
+              <Button type="button" variant="outline" onClick={() => setConfirmOffHours(null)} className="w-full sm:w-auto">
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                onClick={confirmOffHoursOpen}
+                disabled={hoursMut.isPending}
+                className="w-full sm:w-auto bg-lavender text-ink hover:bg-lavender/90"
+              >
+                {hoursMut.isPending ? "Abriendo…" : "Sí, abrir esta hora"}
+              </Button>
+            </div>
+          </div>
+        </Modal>
       )}
 
       {confirmUnlockSlot && (
