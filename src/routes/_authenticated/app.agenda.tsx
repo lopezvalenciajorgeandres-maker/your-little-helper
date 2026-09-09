@@ -38,15 +38,34 @@ export const Route = createFileRoute("/_authenticated/app/agenda")({
 });
 
 const DAY_NAMES = ["lun", "mar", "mié", "jue", "vie", "sáb", "dom"];
-const HOURS = Array.from({ length: 16 }, (_, i) => i + 6); // 06..21
 const SLOT_MIN = 15; // franjas de 15 minutos
 const SLOT_PX = 22; // px por franja de 15 min
 const SLOT_HEIGHT = SLOT_PX * (60 / SLOT_MIN); // px por hora
-const SLOTS = Array.from(
-  { length: HOURS.length * (60 / SLOT_MIN) },
-  (_, i) => HOURS[0] * 60 + i * SLOT_MIN,
-); // 360, 375, ...
 const fmtSlot = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+
+type DayHours = {
+  weekday: number;
+  open_time: string;
+  close_time: string;
+  break_start: string | null;
+  break_end: string | null;
+  closed: boolean;
+};
+
+const DEFAULT_DAY: Omit<DayHours, "weekday"> = {
+  open_time: "09:00",
+  close_time: "18:00",
+  break_start: null,
+  break_end: null,
+  closed: false,
+};
+
+const toMin = (t: string) => {
+  const [h, m] = t.split(":").map(Number);
+  return (h || 0) * 60 + (m || 0);
+};
+const toTime = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+
 
 function startOfWeek(d: Date) {
   const x = new Date(d);
