@@ -815,19 +815,17 @@ function Agenda() {
                   onClick={() => toggleDayBlock(d)}
                   className={`mt-1.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium transition ${
                     dayBlocked
-                      ? "bg-primary text-primary-foreground hover:bg-primary/80"
+                      ? "bg-lavender text-ink hover:bg-lavender/80"
                       : "border border-white/15 text-neutral-300 hover:bg-white/10"
                   }`}
                   title={
-                    dayClosed
-                      ? "Cerrado según el horario del negocio — toca para abrirlo"
-                      : dayBlocked
-                        ? "Día bloqueado — toca para confirmar apertura"
-                        : "Bloquear día completo"
+                    dayBlocked
+                      ? "Día bloqueado — toca para confirmar apertura"
+                      : "Bloquear día completo"
                   }
                 >
                   {dayBlocked ? <LockOpen className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
-                  {dayClosed ? "Cerrado" : dayBlocked ? "Liberar día" : "Bloquear día"}
+                  {dayBlocked ? "Liberar día" : "Bloquear día"}
                 </button>
               </div>
             );
