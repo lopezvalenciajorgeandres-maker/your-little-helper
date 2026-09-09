@@ -6,7 +6,7 @@ import { listClients, createClient } from "@/lib/clients.functions";
 import { listServices } from "@/lib/services.functions";
 import { completeAppointmentSession, createAppointment, deleteAppointment, listAppointments, updateAppointment } from "@/lib/appointments.functions";
 import { Check, CheckCircle2, ChevronLeft, ChevronRight, Clock, Copy, Link2, Lock, LockOpen, MessageCircle, Plus, Trash2, X } from "lucide-react";
-import { createBlock, deleteBlock, listHours, saveHours } from "@/lib/schedule.functions";
+import { createBlock, deleteBlock, listHours, openSlot, saveHours } from "@/lib/schedule.functions";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ClientForm, type ClientPayload } from "@/components/app/client-form";
@@ -82,6 +82,7 @@ function Agenda() {
   const [reminder, setReminder] = useState<WhatsAppReminder | null>(null);
   const [editAppt, setEditAppt] = useState<any | null>(null);
   const [confirmUnlockDay, setConfirmUnlockDay] = useState<Date | null>(null);
+  const [confirmUnlockSlot, setConfirmUnlockSlot] = useState<{ d: Date; m: number } | null>(null);
   const [drag, setDrag] = useState<{
     id: string;
     grabDy: number;
@@ -226,6 +227,16 @@ function Agenda() {
       toast.success("Bloqueo liberado");
     },
     onError: (e: any) => toast.error(e?.message ?? "No se pudo liberar el bloqueo"),
+  });
+
+  const openSlotFn = useServerFn(openSlot);
+  const openSlotMut = useMutation({
+    mutationFn: (v: { starts_at: string; ends_at: string }) => openSlotFn({ data: v }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["schedule"] });
+      toast.success("Hora abierta — solo esa franja quedó disponible");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "No se pudo abrir la hora"),
   });
 
   const blockManyMut = useMutation({
@@ -533,6 +544,16 @@ function Agenda() {
       return;
     }
     blockMut.mutate({ starts_at: s.toISOString(), ends_at: e.toISOString(), kind: "franja", reason: "Horario no disponible" });
+  }
+
+  // Abre solo una franja puntual (aunque el día o la fila completa estén bloqueados).
+  function confirmSlotUnlock() {
+    if (!confirmUnlockSlot) return;
+    const { s, e } = slotRange(confirmUnlockSlot.d, confirmUnlockSlot.m);
+    openSlotMut.mutate(
+      { starts_at: s.toISOString(), ends_at: e.toISOString() },
+      { onSettled: () => setConfirmUnlockSlot(null) },
+    );
   }
 
   function confirmDayUnlock() {
@@ -875,19 +896,19 @@ function Agenda() {
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                             if (fullDayBlocked) {
-                               setConfirmUnlockDay(d);
-                               return;
-                             }
-                             toggleSlotBlock(d, m);
+                              if (blocked) {
+                                setConfirmUnlockSlot({ d, m });
+                                return;
+                              }
+                              toggleSlotBlock(d, m);
                           }}
                           className={`absolute right-0.5 top-0.5 z-10 rounded p-0.5 transition ${
                             blocked
                               ? "bg-rose-500 text-white opacity-100"
                               : "bg-white/15 text-neutral-100 opacity-0 group-hover/slot:opacity-100"
                           }`}
-                           aria-label={fullDayBlocked ? `Abrir confirmación para liberar ${DAY_NAMES[di]}` : blocked ? `Liberar franja ${fmtSlot(m)}` : `Bloquear franja ${fmtSlot(m)}`}
-                           title={fullDayBlocked ? "Día bloqueado — confirmar apertura" : blocked ? "Franja bloqueada — toca para liberar" : "Bloquear esta franja"}
+                           aria-label={blocked ? `Abrir solo la franja ${fmtSlot(m)}` : `Bloquear franja ${fmtSlot(m)}`}
+                           title={blocked ? "Abrir solo esta hora (pide confirmación)" : "Bloquear esta franja"}
                         >
                           {blocked ? <LockOpen className="h-2.5 w-2.5" /> : <Lock className="h-2.5 w-2.5" />}
                         </button>
@@ -1237,6 +1258,47 @@ function Agenda() {
           onCloseTreatment={(v) => closeTreatMut.mutate(v)}
           closingTreatment={closeTreatMut.isPending}
         />
+      )}
+
+      {confirmUnlockSlot && (
+        <Modal title="Abrir esta hora" onClose={() => setConfirmUnlockSlot(null)}>
+          <div className="text-center">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-rose-500/15 text-rose-500">
+              <LockOpen className="h-7 w-7" />
+            </div>
+            <p className="text-base text-foreground">
+              ¿Deseas abrir solo las{" "}
+              <span className="font-semibold">{fmtSlot(confirmUnlockSlot.m)}</span> del{" "}
+              <span className="font-semibold">
+                {confirmUnlockSlot.d.toLocaleDateString("es", { weekday: "long", day: "numeric", month: "long" })}
+              </span>
+              ?
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              El resto del bloqueo se mantiene. Solo esa franja quedará disponible en tu agenda y en el enlace de
+              reservas.
+            </p>
+            <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-center">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setConfirmUnlockSlot(null)}
+                className="w-full sm:w-auto"
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={confirmSlotUnlock}
+                disabled={openSlotMut.isPending}
+                className="w-full sm:w-auto"
+              >
+                {openSlotMut.isPending ? "Abriendo…" : "Sí, abrir esta hora"}
+              </Button>
+            </div>
+          </div>
+        </Modal>
       )}
 
       {confirmUnlockDay && (
