@@ -846,10 +846,10 @@ function Agenda() {
                     className={`shrink-0 rounded p-0.5 transition ${
                       rowBlocked
                         ? "text-rose-400 hover:text-rose-300"
-                        : "text-neutral-500 opacity-0 group-hover/row:opacity-100 hover:text-rose-400"
+                        : "text-neutral-500 hover:text-rose-400"
                     }`}
                   >
-                    {rowBlocked ? <LockOpen className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
+                    {rowBlocked ? <Lock className="h-3 w-3" /> : <LockOpen className="h-3 w-3" />}
                   </button>
                   <span className="tabular-nums">{fmtSlot(m)}</span>
                 </div>
