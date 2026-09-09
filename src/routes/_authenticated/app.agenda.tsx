@@ -239,6 +239,18 @@ function Agenda() {
     onError: (e: any) => toast.error(e?.message ?? "No se pudo abrir la hora"),
   });
 
+  // Abre la misma franja en varios días sin destruir bloqueos de día completo.
+  const openManySlotsMut = useMutation({
+    mutationFn: async (rows: { starts_at: string; ends_at: string }[]) => {
+      for (const v of rows) await openSlotFn({ data: v });
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["schedule"] });
+      toast.success("Franja abierta en la semana — el resto de los bloqueos se mantiene");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "No se pudo abrir la franja"),
+  });
+
   const blockManyMut = useMutation({
     mutationFn: (rows: { starts_at: string; ends_at: string; reason?: string | null; kind?: string }[]) =>
       Promise.all(rows.map((v) => addBlock({ data: { kind: "bloqueo", ...v } }))),
