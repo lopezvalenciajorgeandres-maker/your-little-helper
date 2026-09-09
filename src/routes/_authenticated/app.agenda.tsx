@@ -15,6 +15,7 @@ import { BackupButtons } from "@/components/app/backup-buttons";
 import { closeTreatment, createTreatment, listTreatments, updateTreatment, type TreatmentSummary } from "@/lib/treatments.functions";
 import { useTenant } from "@/lib/use-tenant";
 import { formatMoney } from "@/lib/plan";
+import { listReceivables } from "@/lib/payments.functions";
 
 
 export const Route = createFileRoute("/_authenticated/app/agenda")({
