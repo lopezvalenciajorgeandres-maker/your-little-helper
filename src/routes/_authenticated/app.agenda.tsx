@@ -741,11 +741,12 @@ function Agenda() {
           <div className="border-b border-r border-white/5" />
           {days.map((d, i) => {
             const active = isSameDay(d, today);
-            const dayBlocked = isDayFullyBlocked(d);
+            const dayClosed = !!hoursForWeekday(d.getDay())?.closed;
+            const dayBlocked = isDayFullyBlocked(d) || dayClosed;
             return (
               <div key={i} className="border-b border-white/5 py-3 text-center">
                 <div className="text-[11px] uppercase tracking-wider text-neutral-400">{DAY_NAMES[i]}</div>
-                <div className={`mt-1 mx-auto w-9 h-9 flex items-center justify-center rounded-full text-lg font-medium ${active ? "bg-primary text-primary-foreground" : "text-neutral-100"}`}>
+                <div className={`mt-1 mx-auto w-9 h-9 flex items-center justify-center rounded-full text-lg font-medium ${active ? "bg-primary text-primary-foreground" : dayBlocked ? "text-neutral-500" : "text-neutral-100"}`}>
                   {d.getDate()}
                 </div>
                 <button
@@ -756,10 +757,16 @@ function Agenda() {
                       ? "bg-rose-500 text-white hover:bg-rose-600"
                       : "border border-white/15 text-neutral-300 hover:bg-white/10"
                   }`}
-                  title={dayBlocked ? "Día bloqueado — toca para confirmar apertura" : "Bloquear día completo"}
+                  title={
+                    dayClosed
+                      ? "Cerrado según el horario del negocio — toca para abrirlo"
+                      : dayBlocked
+                        ? "Día bloqueado — toca para confirmar apertura"
+                        : "Bloquear día completo"
+                  }
                 >
                   {dayBlocked ? <LockOpen className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
-                  {dayBlocked ? "Liberar día" : "Bloquear día"}
+                  {dayClosed ? "Cerrado" : dayBlocked ? "Liberar día" : "Bloquear día"}
                 </button>
               </div>
             );
