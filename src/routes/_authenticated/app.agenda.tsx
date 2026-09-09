@@ -1037,8 +1037,9 @@ function Agenda() {
                       style={{
                         top,
                         height,
-                        background: color,
-                        color: readableText(color),
+                        background: cardColor,
+                        color: readableText(cardColor),
+
                         transform: dragging
                           ? `translate(${(drag!.dayIndex - di) * drag!.colWidth}px, ${previewTop - top}px)`
                           : undefined,
