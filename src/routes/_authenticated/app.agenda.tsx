@@ -1357,8 +1357,9 @@ function Agenda() {
               ?
             </p>
             <p className="mt-1 text-sm text-muted-foreground">
-              Esa hora está fuera del horario de tu negocio. Al abrirla se amplía el horario de ese día en la tabla de
-              horarios y quedará disponible para reservas.
+              {weekHours[confirmOffHours.d.getDay()]?.closed
+                ? "Este día está marcado como cerrado. Al abrir esta hora se activa ese día en la tabla de horarios solo para esta franja, y quedará disponible para reservas."
+                : "Esa hora está fuera del horario de tu negocio. Al abrirla se amplía el horario de ese día en la tabla de horarios y quedará disponible para reservas."}
             </p>
             <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-center">
               <Button type="button" variant="outline" onClick={() => setConfirmOffHours(null)} className="w-full sm:w-auto">
