@@ -210,6 +210,41 @@ function Agenda() {
     });
   }
 
+  // Amplía el horario del día para incluir una franja fuera de horario.
+  function confirmOffHoursOpen() {
+    if (!confirmOffHours) return;
+    const { d, m } = confirmOffHours;
+    const weekday = d.getDay();
+    const current = weekHours[weekday];
+    const startMin = m;
+    const endMin = m + SLOT_MIN;
+    const open = current.closed ? startMin : Math.min(toMin(current.open_time), startMin);
+    const close = current.closed ? endMin : Math.max(toMin(current.close_time), endMin);
+    const inBreak =
+      !!current.break_start &&
+      !!current.break_end &&
+      startMin >= toMin(current.break_start) &&
+      startMin < toMin(current.break_end);
+    const next = weekHours.map((h) =>
+      h.weekday === weekday
+        ? {
+            ...h,
+            closed: false,
+            open_time: toTime(Math.max(0, open)),
+            close_time: toTime(Math.min(24 * 60 - 1, close)),
+            break_start: inBreak ? null : h.break_start,
+            break_end: inBreak ? null : h.break_end,
+          }
+        : h,
+    );
+    hoursMut.mutate(next, {
+      onSuccess: () => toast.success("Horario ampliado para esa franja"),
+      onSettled: () => setConfirmOffHours(null),
+    });
+  }
+
+
+
 
 
   const blockMut = useMutation({
