@@ -83,6 +83,7 @@ function Agenda() {
   const [editAppt, setEditAppt] = useState<any | null>(null);
   const [confirmUnlockDay, setConfirmUnlockDay] = useState<Date | null>(null);
   const [confirmUnlockSlot, setConfirmUnlockSlot] = useState<{ d: Date; m: number } | null>(null);
+  const [confirmOffHours, setConfirmOffHours] = useState<{ d: Date; m: number } | null>(null);
   const [confirmUnlockRow, setConfirmUnlockRow] = useState<number | null>(null);
   const [confirmLockRow, setConfirmLockRow] = useState<number | null>(null);
   const [drag, setDrag] = useState<{
