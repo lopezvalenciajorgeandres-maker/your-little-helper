@@ -1034,14 +1034,17 @@ function Agenda() {
                   const sessionsDone = !!tr && tr.status === "open" && trPendingSessions === 0;
                   const trReady = sessionsDone && tr!.balance_cents <= 0;
                   const treatmentPaidAndClosed = !!tr && tr.status === "closed" && tr.balance_cents <= 0;
+                  const treatmentPaidWithPendingSessions = !!tr && tr.status === "open" && tr.balance_cents <= 0 && trPendingSessions > 0;
                   const payRatio = tr && tr.total_cents > 0 ? Math.min(1, tr.paid_cents / tr.total_cents) : 0;
                   const apptPaid = paidByAppt.get(a.id) ?? 0;
                   const trFullyPaid = !!tr && tr.total_cents > 0 && tr.paid_cents >= tr.total_cents;
                   const cardColor = treatmentPaidAndClosed
                     ? "#D1FAE5"
-                    : sessionsDone
-                      ? payProgressColor(payRatio, apptPaid > 0, trFullyPaid)
-                      : color;
+                    : treatmentPaidWithPendingSessions
+                      ? "#BAE6FD"
+                      : sessionsDone
+                        ? payProgressColor(payRatio, apptPaid > 0, trFullyPaid)
+                        : color;
 
                   const dragging = drag?.id === a.id && drag.moved;
                   const previewTop = dragging ? ((drag!.minutes - HOURS[0] * 60) / 60) * SLOT_HEIGHT : top;
@@ -1097,9 +1100,9 @@ function Agenda() {
                           </span>
                           <span
                             className={`rounded px-1 py-[1px] text-[10px] font-semibold ${tr.balance_cents > 0 ? "bg-amber-500 text-black" : "bg-emerald-500 text-white"}`}
-                            title="Saldo pendiente por pagar"
+                            title={tr.balance_cents > 0 ? "Saldo pendiente por pagar" : treatmentPaidWithPendingSessions ? "Tratamiento pagado · faltan sesiones" : "Tratamiento pagado"}
                           >
-                            {tr.balance_cents > 0 ? formatMoney(tr.balance_cents, tenant.currency) : "Pagado"}
+                            {tr.balance_cents > 0 ? formatMoney(tr.balance_cents, tenant.currency) : treatmentPaidWithPendingSessions ? `Pagado · ${trPendingSessions} pend` : "Pagado"}
                           </span>
                         </div>
                       )}
