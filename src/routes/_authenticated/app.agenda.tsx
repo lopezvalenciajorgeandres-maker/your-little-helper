@@ -992,7 +992,7 @@ function Agenda() {
                            aria-label={blocked || offHours ? `Abrir solo la franja ${fmtSlot(m)}` : `Bloquear franja ${fmtSlot(m)}`}
                            title={blocked || offHours ? "Abrir solo esta hora (pide confirmación)" : "Bloquear esta franja"}
                         >
-                          {blocked || offHours ? <Lock className="h-2.5 w-2.5" /> : <Lock className="h-2.5 w-2.5" />}
+                          {blocked || offHours ? <LockOpen className="h-2.5 w-2.5" /> : <Lock className="h-2.5 w-2.5" />}
                         </button>
                       )}
                     </div>
@@ -1340,6 +1340,40 @@ function Agenda() {
           onCloseTreatment={(v) => closeTreatMut.mutate(v)}
           closingTreatment={closeTreatMut.isPending}
         />
+      )}
+
+      {confirmOffHours && (
+        <Modal title="Abrir esta hora" onClose={() => setConfirmOffHours(null)}>
+          <div className="text-center">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-lavender/25 text-lavender">
+              <LockOpen className="h-7 w-7" />
+            </div>
+            <p className="text-base text-foreground">
+              ¿Deseas abrir las <span className="font-semibold">{fmtSlot(confirmOffHours.m)}</span> del{" "}
+              <span className="font-semibold">
+                {confirmOffHours.d.toLocaleDateString("es", { weekday: "long", day: "numeric", month: "long" })}
+              </span>
+              ?
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Esa hora está fuera del horario de tu negocio. Al abrirla se amplía el horario de ese día en la tabla de
+              horarios y quedará disponible para reservas.
+            </p>
+            <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-center">
+              <Button type="button" variant="outline" onClick={() => setConfirmOffHours(null)} className="w-full sm:w-auto">
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                onClick={confirmOffHoursOpen}
+                disabled={hoursMut.isPending}
+                className="w-full sm:w-auto bg-lavender text-ink hover:bg-lavender/90"
+              >
+                {hoursMut.isPending ? "Abriendo…" : "Sí, abrir esta hora"}
+              </Button>
+            </div>
+          </div>
+        </Modal>
       )}
 
       {confirmUnlockSlot && (
