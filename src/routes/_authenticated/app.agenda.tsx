@@ -83,6 +83,7 @@ function Agenda() {
   const [editAppt, setEditAppt] = useState<any | null>(null);
   const [confirmUnlockDay, setConfirmUnlockDay] = useState<Date | null>(null);
   const [confirmUnlockSlot, setConfirmUnlockSlot] = useState<{ d: Date; m: number } | null>(null);
+  const [confirmUnlockRow, setConfirmUnlockRow] = useState<number | null>(null);
   const [drag, setDrag] = useState<{
     id: string;
     grabDy: number;
@@ -237,6 +238,18 @@ function Agenda() {
       toast.success("Hora abierta — solo esa franja quedó disponible");
     },
     onError: (e: any) => toast.error(e?.message ?? "No se pudo abrir la hora"),
+  });
+
+  // Abre la misma franja en varios días sin destruir bloqueos de día completo.
+  const openManySlotsMut = useMutation({
+    mutationFn: async (rows: { starts_at: string; ends_at: string }[]) => {
+      for (const v of rows) await openSlotFn({ data: v });
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["schedule"] });
+      toast.success("Franja abierta en la semana — el resto de los bloqueos se mantiene");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "No se pudo abrir la franja"),
   });
 
   const blockManyMut = useMutation({
@@ -592,16 +605,16 @@ function Agenda() {
   }
 
   function toggleRowBlock(minutes: number) {
-    const existing = days.flatMap((d) => {
-      const { s, e } = slotRange(d, minutes);
-      return blocksOverlapping(s, e);
-    });
-    if (existing.length > 0) {
-      unblockMut.mutate(Array.from(new Set(existing.map((b) => b.id))));
+    // Si la franja ya está bloqueada en todos los días (por bloqueo horizontal,
+    // por día completo o mixto), pedimos confirmación y abrimos SOLO esa franja.
+    if (isRowBlocked(minutes)) {
+      setConfirmUnlockRow(minutes);
       return;
     }
-    blockManyMut.mutate(
-      days.map((d) => {
+    // Bloquear: solo los días que aún no están bloqueados ni cerrados.
+    const rows = days
+      .filter((d) => !weekHours[d.getDay()]?.closed && !isSlotBlocked(d, minutes))
+      .map((d) => {
         const { s, e } = slotRange(d, minutes);
         return {
           starts_at: s.toISOString(),
@@ -609,8 +622,20 @@ function Agenda() {
           kind: "franja",
           reason: "Horario no disponible",
         };
-      }),
-    );
+      });
+    if (rows.length === 0) return;
+    blockManyMut.mutate(rows);
+  }
+
+  function confirmRowUnlock() {
+    if (confirmUnlockRow == null) return;
+    const rows = days
+      .filter((d) => isSlotBlocked(d, confirmUnlockRow))
+      .map((d) => {
+        const { s, e } = slotRange(d, confirmUnlockRow);
+        return { starts_at: s.toISOString(), ends_at: e.toISOString() };
+      });
+    openManySlotsMut.mutate(rows, { onSettled: () => setConfirmUnlockRow(null) });
   }
 
   const bookingSlug = tenant.business?.slug ?? null;
@@ -1295,6 +1320,37 @@ function Agenda() {
                 className="w-full sm:w-auto"
               >
                 {openSlotMut.isPending ? "Abriendo…" : "Sí, abrir esta hora"}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {confirmUnlockRow != null && (
+        <Modal title="Abrir esta franja en la semana" onClose={() => setConfirmUnlockRow(null)}>
+          <div className="text-center">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-rose-500/15 text-rose-500">
+              <LockOpen className="h-7 w-7" />
+            </div>
+            <p className="text-base text-foreground">
+              ¿Deseas abrir las <span className="font-semibold">{fmtSlot(confirmUnlockRow)}</span> en todos los días de
+              esta semana?
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Solo se libera esa franja. Los días bloqueados por completo siguen bloqueados en el resto de sus horas.
+            </p>
+            <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-center">
+              <Button type="button" variant="outline" onClick={() => setConfirmUnlockRow(null)} className="w-full sm:w-auto">
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={confirmRowUnlock}
+                disabled={openManySlotsMut.isPending}
+                className="w-full sm:w-auto"
+              >
+                {openManySlotsMut.isPending ? "Abriendo…" : "Sí, abrir la franja"}
               </Button>
             </div>
           </div>
