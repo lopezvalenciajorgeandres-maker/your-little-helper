@@ -1100,9 +1100,9 @@ function Agenda() {
                           </span>
                           <span
                             className={`rounded px-1 py-[1px] text-[10px] font-semibold ${tr.balance_cents > 0 ? "bg-amber-500 text-black" : "bg-emerald-500 text-white"}`}
-                            title="Saldo pendiente por pagar"
+                            title={tr.balance_cents > 0 ? "Saldo pendiente por pagar" : treatmentPaidWithPendingSessions ? "Tratamiento pagado · faltan sesiones" : "Tratamiento pagado"}
                           >
-                            {tr.balance_cents > 0 ? formatMoney(tr.balance_cents, tenant.currency) : "Pagado"}
+                            {tr.balance_cents > 0 ? formatMoney(tr.balance_cents, tenant.currency) : treatmentPaidWithPendingSessions ? `Pagado · ${trPendingSessions} pend` : "Pagado"}
                           </span>
                         </div>
                       )}
