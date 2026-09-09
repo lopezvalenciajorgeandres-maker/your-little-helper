@@ -734,6 +734,11 @@ function Agenda() {
               <div key={di} className="relative border-r border-white/5 last:border-r-0">
                 {SLOTS.map((m) => {
                   const blocked = isSlotBlocked(d, m);
+                  const dh = hoursForWeekday(d.getDay());
+                  const inBreak =
+                    !!dh.break_start && !!dh.break_end && m >= toMin(dh.break_start) && m < toMin(dh.break_end);
+                  const offHours =
+                    dh.closed || m < toMin(dh.open_time) || m >= toMin(dh.close_time) || inBreak;
                   const taken = dayAppts.some((a) => {
                     const s = new Date(a.starts_at);
                     const e = new Date(a.ends_at);
@@ -746,13 +751,17 @@ function Agenda() {
                       <button
                         onClick={() => (blocked ? toggleSlotBlock(d, m) : openNewAt(d, m))}
                         style={{ height: SLOT_PX }}
+                        title={offHours ? "Fuera del horario del negocio — al agendar aquí se amplía el horario" : undefined}
                         aria-label={blocked ? `Liberar franja ${fmtSlot(m)}` : `Nueva cita ${fmtSlot(m)}`}
                         className={`w-full block transition border-b ${m % 60 === 0 ? "border-white/10" : "border-white/[0.04]"} ${
                           blocked
                             ? "bg-[repeating-linear-gradient(45deg,rgba(244,63,94,0.35)_0_6px,transparent_6px_12px)] hover:bg-rose-500/30"
-                            : "hover:bg-white/[0.06]"
+                            : offHours
+                              ? "bg-black/25 hover:bg-white/[0.06]"
+                              : "hover:bg-white/[0.06]"
                         }`}
                       />
+
                       {!taken && (
                         <button
                           type="button"
