@@ -1326,6 +1326,37 @@ function Agenda() {
         </Modal>
       )}
 
+      {confirmUnlockRow != null && (
+        <Modal title="Abrir esta franja en la semana" onClose={() => setConfirmUnlockRow(null)}>
+          <div className="text-center">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-rose-500/15 text-rose-500">
+              <LockOpen className="h-7 w-7" />
+            </div>
+            <p className="text-base text-foreground">
+              ¿Deseas abrir las <span className="font-semibold">{fmtSlot(confirmUnlockRow)}</span> en todos los días de
+              esta semana?
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Solo se libera esa franja. Los días bloqueados por completo siguen bloqueados en el resto de sus horas.
+            </p>
+            <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-center">
+              <Button type="button" variant="outline" onClick={() => setConfirmUnlockRow(null)} className="w-full sm:w-auto">
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={confirmRowUnlock}
+                disabled={openManySlotsMut.isPending}
+                className="w-full sm:w-auto"
+              >
+                {openManySlotsMut.isPending ? "Abriendo…" : "Sí, abrir la franja"}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
       {confirmUnlockDay && (
         <Modal
           title={weekHours[confirmUnlockDay.getDay()]?.closed ? "Abrir día cerrado" : "Abrir día bloqueado"}
