@@ -91,6 +91,8 @@ export const exportFullBackup = createServerFn({ method: "POST" })
     }
 
 
+    const hours = (await sb.from("business_hours").select("*").eq("business_id", businessId)).data ?? [];
+
     const sheets: BackupSheets = {
       [SHEETS.clients]: cl.map((c) => ({
         nombre: c.full_name,
@@ -119,12 +121,26 @@ export const exportFullBackup = createServerFn({ method: "POST" })
         email: p.email ?? "",
         activo: p.active ? "si" : "no",
       })),
+      [SHEETS.treatments]: tr.map((t) => ({
+        id: t.id,
+        cliente: t.client_id ? (clientName.get(t.client_id) ?? "") : "",
+        nombre: t.name ?? "",
+        servicio: t.service_id ? (serviceName.get(t.service_id) ?? "") : "",
+        total: (t.total_cents ?? 0) / 100,
+        sesiones: t.sessions_total ?? 1,
+        estado: t.status,
+        notas: t.notes ?? "",
+        creado_iso: t.created_at,
+        cerrado_iso: t.closed_at ?? "",
+      })),
       [SHEETS.appointments]: ap.map((a) => ({
+        id: a.id,
         inicio_iso: a.starts_at,
         fin_iso: a.ends_at,
         cliente: a.client_id ? (clientName.get(a.client_id) ?? "") : "",
         servicio: a.service_id ? (serviceName.get(a.service_id) ?? "") : "",
         profesional: a.professional_id ? (proName.get(a.professional_id) ?? "") : "",
+        tratamiento_id: a.treatment_id ?? "",
         estado: a.status,
         origen: a.origin ?? "",
         valor: (a.price_cents ?? 0) / 100,
@@ -134,6 +150,8 @@ export const exportFullBackup = createServerFn({ method: "POST" })
         fecha_iso: p.paid_at,
         cliente: p.client_id ? (clientName.get(p.client_id) ?? "") : "",
         servicio: p.service_id ? (serviceName.get(p.service_id) ?? "") : "",
+        tratamiento_id: p.treatment_id ?? "",
+        cita_id: p.appointment_id ?? "",
         abono: (p.amount_cents ?? 0) / 100,
         total: (p.total_cents ?? 0) / 100,
         metodo: p.method,
@@ -156,6 +174,15 @@ export const exportFullBackup = createServerFn({ method: "POST" })
         nota: n.body,
         privada: n.private ? "si" : "no",
       })),
+      [SHEETS.hours]: hours.map((h) => ({
+        dia: h.weekday,
+        profesional: h.professional_id ? (proName.get(h.professional_id) ?? "") : "",
+        abre: h.open_time,
+        cierra: h.close_time,
+        descanso_inicio: h.break_start ?? "",
+        descanso_fin: h.break_end ?? "",
+        cerrado: h.closed ? "si" : "no",
+      })),
       [SHEETS.balances]: cl.map((c) => {
         const total = (charged.get(c.id) ?? 0) / 100;
         const abonado = (paid.get(c.id) ?? 0) / 100;
@@ -168,6 +195,7 @@ export const exportFullBackup = createServerFn({ method: "POST" })
         };
       }),
     };
+
 
     await sb.from("backups").insert({
       business_id: businessId,
