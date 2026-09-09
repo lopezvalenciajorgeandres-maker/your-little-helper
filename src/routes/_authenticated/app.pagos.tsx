@@ -424,7 +424,7 @@ function PaymentModal({ clients, services, receivables, treatments, preselected,
             {options.map((r) => (
               <option key={r.appointment_id} value={r.appointment_id}>
                 {new Date(r.starts_at).toLocaleDateString("es-ES")} · {r.client_name} · {r.service_name} ·{" "}
-                {r.balance_cents > 0 ? `debe ${formatMoney(r.balance_cents, currency)}` : "pagada"}
+                {r.balance_cents > 0 ? "pendiente" : "pagada"}
               </option>
             ))}
           </select>
