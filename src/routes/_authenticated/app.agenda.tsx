@@ -846,7 +846,7 @@ function Agenda() {
                   key={m}
                   style={{ height: SLOT_PX }}
                   className={`group/row relative flex items-center justify-end gap-1 pr-2 border-b border-white/5 text-[10px] ${
-                    rowBlocked ? "bg-rose-500/15" : ""
+                    rowBlocked ? "bg-primary/15" : ""
                   } ${m % 60 === 0 ? "text-neutral-300 font-medium" : "text-neutral-500"}`}
                 >
                   <button
@@ -854,14 +854,14 @@ function Agenda() {
                     onClick={() => toggleRowBlock(m)}
                     title={
                       rowBlocked
-                        ? `Liberar ${fmtSlot(m)} en toda la semana`
-                        : `Bloquear ${fmtSlot(m)} en todos los días de la semana`
+                        ? `Abrir ${fmtSlot(m)} en toda la semana (pide confirmación)`
+                        : `Cerrar ${fmtSlot(m)} en todos los días de la semana (pide confirmación)`
                     }
-                    aria-label={rowBlocked ? `Liberar franja ${fmtSlot(m)} de la semana` : `Bloquear franja ${fmtSlot(m)} de la semana`}
+                    aria-label={rowBlocked ? `Abrir franja ${fmtSlot(m)} de la semana` : `Cerrar franja ${fmtSlot(m)} de la semana`}
                     className={`shrink-0 rounded p-0.5 transition ${
                       rowBlocked
-                        ? "text-rose-400 hover:text-rose-300"
-                        : "text-neutral-500 hover:text-rose-400"
+                        ? "text-primary hover:text-primary/80"
+                        : "text-neutral-500 hover:text-primary"
                     }`}
                   >
                     {rowBlocked ? <Lock className="h-3 w-3" /> : <LockOpen className="h-3 w-3" />}
@@ -944,8 +944,8 @@ function Agenda() {
                           }}
                           className={`absolute right-0.5 top-0.5 z-10 rounded p-0.5 transition ${
                             blocked
-                              ? "bg-rose-500 text-white opacity-100"
-                              : "bg-white/15 text-neutral-100 opacity-0 group-hover/slot:opacity-100"
+                               ? "bg-primary text-primary-foreground opacity-100"
+                               : "bg-white/15 text-neutral-100 opacity-0 group-hover/slot:opacity-100"
                           }`}
                            aria-label={blocked ? `Abrir solo la franja ${fmtSlot(m)}` : `Bloquear franja ${fmtSlot(m)}`}
                            title={blocked ? "Abrir solo esta hora (pide confirmación)" : "Bloquear esta franja"}
