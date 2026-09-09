@@ -926,7 +926,7 @@ function Agenda() {
                            blocked || dayClosed
                              ? "bg-[repeating-linear-gradient(45deg,color-mix(in_srgb,var(--primary)_28%,transparent)_0_6px,transparent_6px_12px)] hover:bg-primary/25"
                              : offHours
-                               ? "bg-black/25 hover:bg-white/[0.06]"
+                               ? "bg-[repeating-linear-gradient(45deg,rgba(255,255,255,0.05)_0_6px,transparent_6px_12px)] bg-black/30 hover:bg-white/[0.06]"
                                : "hover:bg-white/[0.06]"
                          }`}
                       />
