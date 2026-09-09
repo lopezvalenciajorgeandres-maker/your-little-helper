@@ -347,7 +347,7 @@ function PaymentModal({ clients, services, receivables, treatments, preselected,
 
 
   const options = useMemo(() => {
-    const pendingFirst = [...receivables].sort((a, b) => Number(b.balance_cents > 0) - Number(a.balance_cents > 0));
+    const pendingFirst = [...receivables].sort((a, b) => Number(a.paid_cents > 0) - Number(b.paid_cents > 0));
     return pendingFirst.slice(0, 200);
   }, [receivables]);
 
@@ -424,7 +424,7 @@ function PaymentModal({ clients, services, receivables, treatments, preselected,
             {options.map((r) => (
               <option key={r.appointment_id} value={r.appointment_id}>
                 {new Date(r.starts_at).toLocaleDateString("es-ES")} · {r.client_name} · {r.service_name} ·{" "}
-                {r.balance_cents > 0 ? "pendiente" : "pagada"}
+                {r.paid_cents > 0 ? "pagada" : "pendiente"}
               </option>
             ))}
           </select>
